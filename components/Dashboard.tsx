@@ -17,6 +17,14 @@ import ProductsPage from "./pages/ProductsPage";
 import ThemesPage from "./pages/ThemesPage";
 import PaymentLinksPage from "./pages/PaymentLinksPage";
 import {
+  ReceivingPage,
+  CryptoPage,
+  NotificationsPage,
+  TrackingPage,
+  ApiPage,
+  ReferralsPage,
+} from "./pages/SettingsPages";
+import {
   IconTrendUp,
   IconClock,
   IconPercent,
@@ -71,6 +79,18 @@ export default function Dashboard() {
             <ProductsPage />
           ) : active === "Links de Pagamento" ? (
             <PaymentLinksPage />
+          ) : active === "Recebimento" ? (
+            <ReceivingPage />
+          ) : active === "Saque em Cripto" ? (
+            <CryptoPage />
+          ) : active === "Notificações" ? (
+            <NotificationsPage />
+          ) : active === "Trackeamento" ? (
+            <TrackingPage />
+          ) : active === "API & Webhooks" ? (
+            <ApiPage />
+          ) : active === "Indicações" ? (
+            <ReferralsPage />
           ) : active === "Temas" ? (
             <ThemesPage />
           ) : active === "Dashboard" ? (
