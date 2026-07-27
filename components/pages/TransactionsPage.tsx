@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { PageHeader, MiniStat, FakeSelect } from "./shared";
+import TransactionDetailModal, { TxDetail } from "../TransactionDetailModal";
 import {
   IconTrendUp,
   IconCart,
@@ -11,49 +13,61 @@ import {
   IconEye,
   IconLink,
   IconBox,
+  IconPix,
+  IconCard,
 } from "../icons";
 
-type Tx = {
-  data: string;
-  status: "pendente" | "paga" | "recusada";
-  origem: "checkout" | "link";
-  produto: string | null;
-  cliente: { nome: string; email: string } | null;
-  valor: string;
-};
+type Tx = TxDetail;
 
 const txs: Tx[] = [
   {
+    id: "#ZP-000004",
     data: "27/07/2026, 21:40",
     status: "pendente",
     origem: "link",
+    metodo: "PIX",
     produto: null,
     cliente: null,
     valor: "R$ 100,00",
+    taxa: "R$ 4,99",
+    liquido: "R$ 95,01",
   },
   {
+    id: "#ZP-000003",
     data: "27/07/2026, 21:38",
     status: "pendente",
     origem: "checkout",
+    metodo: "Crédito",
+    parcelas: 12,
     produto: "Produto Teste",
-    cliente: { nome: "Mariana Silva", email: "mariana.silva@mail.com" },
+    cliente: { nome: "Mariana Silva", email: "mariana.silva@mail.com", cpf: "123.456.789-09" },
     valor: "R$ 1.200,00",
+    taxa: "R$ 84,88",
+    liquido: "R$ 1.115,12",
   },
   {
+    id: "#ZP-000002",
     data: "27/07/2026, 21:38",
     status: "pendente",
     origem: "checkout",
+    metodo: "PIX",
     produto: "Produto Teste",
-    cliente: { nome: "Rafael Araujo", email: "rafael.araujo@mail.com" },
+    cliente: { nome: "Rafael Araujo", email: "rafael.araujo@mail.com", cpf: "987.654.321-00" },
     valor: "R$ 1.200,00",
+    taxa: "R$ 48,88",
+    liquido: "R$ 1.151,12",
   },
   {
+    id: "#ZP-000001",
     data: "27/07/2026, 13:20",
     status: "pendente",
     origem: "link",
+    metodo: "Débito",
     produto: null,
     cliente: null,
     valor: "R$ 20,00",
+    taxa: "R$ 2,00",
+    liquido: "R$ 18,00",
   },
 ];
 
@@ -64,6 +78,8 @@ const statusStyle: Record<Tx["status"], string> = {
 };
 
 export default function TransactionsPage() {
+  const [detail, setDetail] = useState<Tx | null>(null);
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -129,11 +145,12 @@ export default function TransactionsPage() {
 
         {/* Tabela */}
         <div className="mt-4 overflow-x-auto">
-          <table className="w-full min-w-[760px] text-left text-[13px]">
+          <table className="w-full min-w-[880px] text-left text-[13px]">
             <thead>
               <tr className="border-b border-zen-border text-[11px] uppercase tracking-wider text-zen-muted">
                 <th className="pb-2.5 pr-4 font-bold">Data</th>
                 <th className="pb-2.5 pr-4 font-bold">Status</th>
+                <th className="pb-2.5 pr-4 font-bold">Método</th>
                 <th className="pb-2.5 pr-4 font-bold">Origem</th>
                 <th className="pb-2.5 pr-4 font-bold">Produto</th>
                 <th className="pb-2.5 pr-4 font-bold">Cliente</th>
@@ -151,6 +168,23 @@ export default function TransactionsPage() {
                     >
                       <IconClock className="h-3 w-3" />
                       {tx.status}
+                    </span>
+                  </td>
+                  <td className="py-3.5 pr-4">
+                    <span
+                      className={`inline-flex items-center gap-1.5 text-[12px] font-semibold ${
+                        tx.metodo === "PIX" ? "text-emerald-400" : "text-zinc-300"
+                      }`}
+                    >
+                      {tx.metodo === "PIX" ? (
+                        <IconPix className="h-3.5 w-3.5" />
+                      ) : (
+                        <IconCard className="h-3.5 w-3.5" />
+                      )}
+                      {tx.metodo}
+                      {tx.metodo === "Crédito" && tx.parcelas && tx.parcelas > 1
+                        ? ` ${tx.parcelas}x`
+                        : ""}
                     </span>
                   </td>
                   <td className="py-3.5 pr-4">
@@ -179,7 +213,11 @@ export default function TransactionsPage() {
                   </td>
                   <td className="py-3.5 pr-4 text-right font-bold">{tx.valor}</td>
                   <td className="py-3.5 text-right">
-                    <button className="text-zinc-500 transition hover:text-white" title="Ver detalhes">
+                    <button
+                      onClick={() => setDetail(tx)}
+                      className="text-zinc-500 transition hover:text-white"
+                      title="Ver detalhes"
+                    >
                       <IconEye className="h-4 w-4" />
                     </button>
                   </td>
@@ -189,6 +227,8 @@ export default function TransactionsPage() {
           </table>
         </div>
       </section>
+
+      {detail && <TransactionDetailModal tx={detail} onClose={() => setDetail(null)} />}
     </div>
   );
 }
