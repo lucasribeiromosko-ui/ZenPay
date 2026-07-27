@@ -15,6 +15,7 @@ import TransactionsPage from "./pages/TransactionsPage";
 import ClientsPage from "./pages/ClientsPage";
 import ProductsPage from "./pages/ProductsPage";
 import ThemesPage from "./pages/ThemesPage";
+import PaymentLinksPage from "./pages/PaymentLinksPage";
 import {
   IconTrendUp,
   IconClock,
@@ -68,11 +69,13 @@ export default function Dashboard() {
             <ClientsPage />
           ) : active === "Produtos & Checkouts" ? (
             <ProductsPage />
+          ) : active === "Links de Pagamento" ? (
+            <PaymentLinksPage />
           ) : active === "Temas" ? (
             <ThemesPage />
           ) : active === "Dashboard" ? (
             <>
-              <BalanceCard />
+              <BalanceCard onQuickPay={() => setActive("Links de Pagamento")} />
 
               {/* Stat cards */}
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">

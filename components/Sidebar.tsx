@@ -16,6 +16,7 @@ import {
   IconBell,
   IconGift,
   IconPlus,
+  IconLink,
   IconZen,
 } from "./icons";
 
@@ -46,6 +47,7 @@ const sections: NavSection[] = [
       { label: "Bot Telegram", icon: <IconBot /> },
       { label: "Agent IA", icon: <IconSparkles />, badge: { text: "EM BREVE", variant: "soon" } },
       { label: "Produtos & Checkouts", icon: <IconBox /> },
+      { label: "Links de Pagamento", icon: <IconLink /> },
       { label: "Temas", icon: <IconPalette />, badge: { text: "NOVO", variant: "new" } },
     ],
   },

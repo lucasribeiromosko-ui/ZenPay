@@ -3,7 +3,11 @@
 import { useState } from "react";
 import { IconQr, IconSend, IconUser, IconEye, IconEyeOff } from "./icons";
 
-export default function BalanceCard() {
+export default function BalanceCard({
+  onQuickPay,
+}: {
+  onQuickPay?: () => void;
+}) {
   const [hidden, setHidden] = useState(false);
 
   return (
@@ -44,12 +48,13 @@ export default function BalanceCard() {
         {/* Ações rápidas */}
         <div className="grid max-w-md grid-cols-3 overflow-hidden rounded-2xl bg-gradient-to-r from-zen-red to-zen-red-dark shadow-red-soft">
           {[
-            { label: "Pagamento Rápido", icon: <IconQr className="h-5 w-5" /> },
-            { label: "Transferir", icon: <IconSend className="h-5 w-5" /> },
-            { label: "Personalizar Identificador", icon: <IconUser className="h-5 w-5" /> },
+            { label: "Pagamento Rápido", icon: <IconQr className="h-5 w-5" />, action: onQuickPay },
+            { label: "Transferir", icon: <IconSend className="h-5 w-5" />, action: undefined },
+            { label: "Personalizar Identificador", icon: <IconUser className="h-5 w-5" />, action: undefined },
           ].map((action, i) => (
             <button
               key={action.label}
+              onClick={action.action}
               className={`flex flex-col items-center gap-2 px-3 py-4 text-center transition hover:bg-white/10 ${
                 i > 0 ? "border-l border-white/15" : ""
               }`}
