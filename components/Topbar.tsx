@@ -1,20 +1,28 @@
 "use client";
 
 import { useState } from "react";
-import { IconHeadset, IconGlobe, IconUser, IconLogout, IconZen } from "./icons";
+import { IconHeadset, IconGlobe, IconUser, IconLogout, IconZen, IconMenu } from "./icons";
 
 type TopbarProps = {
   userName: string | null;
   onLogout: () => void;
+  onOpenMenu: () => void;
 };
 
-export default function Topbar({ userName, onLogout }: TopbarProps) {
+export default function Topbar({ userName, onLogout, onOpenMenu }: TopbarProps) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
     <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-zen-border bg-zen-bg/80 px-4 backdrop-blur-md lg:px-8">
-      {/* Mobile logo */}
+      {/* Menu + logo no mobile */}
       <div className="flex items-center gap-2 lg:hidden">
+        <button
+          onClick={onOpenMenu}
+          className="flex h-9 w-9 items-center justify-center rounded-lg border border-zen-border bg-zen-card text-zinc-300 transition hover:border-zen-red/50 hover:text-white"
+          aria-label="Abrir menu"
+        >
+          <IconMenu className="h-4.5 w-4.5" />
+        </button>
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-zen-red to-zen-blood text-white">
           <IconZen className="h-4 w-4" />
         </div>

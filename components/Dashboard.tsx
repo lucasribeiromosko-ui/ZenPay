@@ -38,6 +38,7 @@ export default function Dashboard() {
   const [user, setUser] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
   const [active, setActive] = useState("Dashboard");
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     setUser(localStorage.getItem(STORAGE_KEY));
@@ -58,10 +59,19 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-zen-bg">
-      <Sidebar active={active} onNavigate={setActive} />
+      <Sidebar
+        active={active}
+        onNavigate={setActive}
+        open={menuOpen}
+        onClose={() => setMenuOpen(false)}
+      />
 
       <div className="lg:pl-[248px]">
-        <Topbar userName={user} onLogout={handleLogout} />
+        <Topbar
+          userName={user}
+          onLogout={handleLogout}
+          onOpenMenu={() => setMenuOpen(true)}
+        />
 
         <main
           className={`mx-auto max-w-[1200px] space-y-6 px-4 py-6 lg:px-8 ${

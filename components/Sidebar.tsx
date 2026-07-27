@@ -17,6 +17,7 @@ import {
   IconGift,
   IconPlus,
   IconLink,
+  IconClose,
   IconZen,
 } from "./icons";
 
@@ -71,11 +72,31 @@ const sections: NavSection[] = [
 type SidebarProps = {
   active: string;
   onNavigate: (label: string) => void;
+  open: boolean;
+  onClose: () => void;
 };
 
-export default function Sidebar({ active, onNavigate }: SidebarProps) {
+export default function Sidebar({ active, onNavigate, open, onClose }: SidebarProps) {
+  function go(label: string) {
+    onNavigate(label);
+    onClose();
+  }
+
   return (
-    <aside className="fixed inset-y-0 left-0 z-30 hidden w-[248px] flex-col border-r border-zen-border bg-zen-surface lg:flex">
+    <>
+      {/* Backdrop no mobile */}
+      {open && (
+        <div
+          onClick={onClose}
+          className="fixed inset-0 z-30 bg-black/60 backdrop-blur-sm animate-fade-in lg:hidden"
+        />
+      )}
+
+      <aside
+        className={`fixed inset-y-0 left-0 z-40 flex w-[248px] flex-col border-r border-zen-border bg-zen-surface transition-transform duration-300 lg:translate-x-0 ${
+          open ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
       {/* Logo */}
       <div className="flex items-center gap-2.5 px-5 pb-2 pt-5">
         <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-zen-red to-zen-blood text-white shadow-red-soft">
@@ -84,12 +105,19 @@ export default function Sidebar({ active, onNavigate }: SidebarProps) {
         <span className="text-lg font-extrabold tracking-wide">
           ZEN<span className="text-zen-red-bright">PAY</span>
         </span>
+        <button
+          onClick={onClose}
+          className="ml-auto flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 transition hover:bg-white/5 hover:text-white lg:hidden"
+          aria-label="Fechar menu"
+        >
+          <IconClose className="h-4 w-4" />
+        </button>
       </div>
 
       {/* CTA */}
       <div className="px-4 pb-2 pt-3">
         <button
-          onClick={() => onNavigate("Produtos & Checkouts")}
+          onClick={() => go("Produtos & Checkouts")}
           className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-zen-red to-zen-red-dark px-4 py-2.5 text-sm font-semibold text-white shadow-red-soft transition hover:brightness-110"
         >
           <IconPlus className="h-4 w-4" />
@@ -110,7 +138,7 @@ export default function Sidebar({ active, onNavigate }: SidebarProps) {
                 return (
                   <li key={item.label}>
                     <button
-                      onClick={() => onNavigate(item.label)}
+                      onClick={() => go(item.label)}
                       className={`group flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13.5px] font-medium transition ${
                         isActive
                           ? "bg-zen-red/15 text-zen-red-bright"
@@ -144,7 +172,7 @@ export default function Sidebar({ active, onNavigate }: SidebarProps) {
       {/* Indicações + faturamento */}
       <div className="space-y-3 border-t border-zen-border px-4 py-4">
         <button
-          onClick={() => onNavigate("Indicações")}
+          onClick={() => go("Indicações")}
           className="flex w-full items-center gap-2.5 rounded-xl border border-zen-red/30 bg-zen-red/10 px-3 py-2.5 text-sm font-semibold text-zen-red-bright transition hover:bg-zen-red/20"
         >
           <IconGift className="h-4 w-4" />
@@ -170,6 +198,7 @@ export default function Sidebar({ active, onNavigate }: SidebarProps) {
           </div>
         </div>
       </div>
-    </aside>
+      </aside>
+    </>
   );
 }
