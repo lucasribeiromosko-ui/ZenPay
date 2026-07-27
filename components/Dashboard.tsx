@@ -16,6 +16,8 @@ import ClientsPage from "./pages/ClientsPage";
 import ProductsPage from "./pages/ProductsPage";
 import ThemesPage from "./pages/ThemesPage";
 import PaymentLinksPage from "./pages/PaymentLinksPage";
+import ProductModal from "./ProductModal";
+import { Product, loadProducts, saveProducts } from "@/lib/products";
 import {
   ReceivingPage,
   CryptoPage,
@@ -39,6 +41,14 @@ export default function Dashboard() {
   const [ready, setReady] = useState(false);
   const [active, setActive] = useState("Dashboard");
   const [menuOpen, setMenuOpen] = useState(false);
+  const [productModal, setProductModal] = useState(false);
+
+  function handleCreateProduct(p: Product) {
+    saveProducts([p, ...loadProducts()]);
+    window.dispatchEvent(new Event("zenpay:products"));
+    setProductModal(false);
+    setActive("Produtos & Checkouts");
+  }
 
   useEffect(() => {
     setUser(localStorage.getItem(STORAGE_KEY));
@@ -64,6 +74,7 @@ export default function Dashboard() {
         onNavigate={setActive}
         open={menuOpen}
         onClose={() => setMenuOpen(false)}
+        onCreateProduct={() => setProductModal(true)}
       />
 
       <div className="lg:pl-[248px]">
@@ -86,7 +97,7 @@ export default function Dashboard() {
           ) : active === "Clientes" ? (
             <ClientsPage />
           ) : active === "Produtos & Checkouts" ? (
-            <ProductsPage />
+            <ProductsPage onCreateClick={() => setProductModal(true)} />
           ) : active === "Links de Pagamento" ? (
             <PaymentLinksPage />
           ) : active === "Recebimento" ? (
@@ -174,6 +185,10 @@ export default function Dashboard() {
           )}
         </main>
       </div>
+
+      {productModal && !locked && (
+        <ProductModal onClose={() => setProductModal(false)} onCreate={handleCreateProduct} />
+      )}
 
       {locked && <LoginModal onLogin={handleLogin} />}
     </div>

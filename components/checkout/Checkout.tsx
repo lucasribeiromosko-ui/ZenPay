@@ -47,6 +47,7 @@ export default function Checkout({ linkId }: { linkId: string }) {
   const allowCredito = sp.get("credito") !== "0";
   const allowDebito = sp.get("debito") === "1";
   const maxParcelas = Math.max(1, parseInt(sp.get("parcelas") || "1", 10) || 1);
+  const modoCompleto = sp.get("modo") === "completo";
 
   const methods: Method[] = useMemo(() => {
     const m: Method[] = [];
@@ -64,6 +65,41 @@ export default function Checkout({ linkId }: { linkId: string }) {
   const [cardCvv, setCardCvv] = useState("");
   const [parcelas, setParcelas] = useState(1);
   const [paid, setPaid] = useState(false);
+
+  // Dados do comprador (checkout completo)
+  const [step, setStep] = useState<"dados" | "pagamento">(
+    modoCompleto ? "dados" : "pagamento"
+  );
+  const [nome, setNome] = useState("");
+  const [email, setEmail] = useState("");
+  const [cpf, setCpf] = useState("");
+  const [erroDados, setErroDados] = useState<string | null>(null);
+
+  function maskCpf(v: string): string {
+    const d = v.replace(/\D/g, "").slice(0, 11);
+    return d
+      .replace(/(\d{3})(\d)/, "$1.$2")
+      .replace(/(\d{3})\.(\d{3})(\d)/, "$1.$2.$3")
+      .replace(/\.(\d{3})(\d{1,2})$/, ".$1-$2");
+  }
+
+  function submitDados(e: React.FormEvent) {
+    e.preventDefault();
+    if (nome.trim().split(" ").filter(Boolean).length < 2) {
+      setErroDados("Informe seu nome completo.");
+      return;
+    }
+    if (!email.includes("@") || !email.includes(".")) {
+      setErroDados("Informe um e-mail válido.");
+      return;
+    }
+    if (cpf.replace(/\D/g, "").length !== 11) {
+      setErroDados("Informe um CPF válido.");
+      return;
+    }
+    setErroDados(null);
+    setStep("pagamento");
+  }
 
   const pixCode = `00020126580014BR.GOV.BCB.PIX0136zenpay-${linkId}-demo520400005303986540${valor
     .toFixed(2)
@@ -135,6 +171,27 @@ export default function Checkout({ linkId }: { linkId: string }) {
             {brl(valor)}
           </p>
 
+          {modoCompleto && step === "pagamento" && (
+            <div className="mt-5 rounded-xl border border-zen-border bg-zen-bg p-3.5">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-zen-muted">
+                    Comprador
+                  </p>
+                  <p className="mt-1 truncate text-[13px] font-semibold">{nome}</p>
+                  <p className="truncate text-[11.5px] text-zen-muted">{email}</p>
+                  <p className="font-mono text-[11.5px] text-zen-muted">{cpf}</p>
+                </div>
+                <button
+                  onClick={() => setStep("dados")}
+                  className="shrink-0 text-[11.5px] font-semibold text-zen-red-bright transition hover:brightness-125"
+                >
+                  Editar
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="mt-5 space-y-2.5 border-t border-zen-border pt-5">
             <div className="flex items-center gap-2 text-[12.5px] text-zen-muted">
               <IconShield className="h-4 w-4 text-emerald-400" />
@@ -153,6 +210,99 @@ export default function Checkout({ linkId }: { linkId: string }) {
 
         {/* Pagamento */}
         <section className="rounded-2xl border border-zen-border bg-zen-card p-6">
+          {/* Passos do checkout completo */}
+          {modoCompleto && (
+            <div className="mb-5 flex items-center gap-2">
+              {(["dados", "pagamento"] as const).map((s, i) => {
+                const done = step === "pagamento" && s === "dados";
+                const atual = step === s;
+                return (
+                  <div key={s} className="flex flex-1 items-center gap-2">
+                    <span
+                      className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold transition ${
+                        done
+                          ? "bg-emerald-500/15 text-emerald-400"
+                          : atual
+                            ? "bg-zen-red text-white"
+                            : "bg-white/5 text-zinc-500"
+                      }`}
+                    >
+                      {done ? <IconCheck className="h-3 w-3" /> : i + 1}
+                    </span>
+                    <span
+                      className={`text-[12px] font-semibold ${
+                        atual ? "text-white" : "text-zen-muted"
+                      }`}
+                    >
+                      {s === "dados" ? "Seus dados" : "Pagamento"}
+                    </span>
+                    {i === 0 && <span className="h-px flex-1 bg-zen-border" />}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {modoCompleto && step === "dados" ? (
+            <form onSubmit={submitDados} className="space-y-3.5">
+              <p className="text-[13.5px] font-semibold">Preencha seus dados para continuar</p>
+
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-zen-muted">
+                  Nome completo
+                </p>
+                <input
+                  type="text"
+                  value={nome}
+                  onChange={(e) => setNome(e.target.value)}
+                  placeholder="Seu nome completo"
+                  className="mt-1.5 w-full rounded-xl border border-zen-border bg-zen-bg px-4 py-2.5 text-[13px] outline-none transition placeholder:text-zinc-600 focus:border-zen-red/60 focus:ring-2 focus:ring-zen-red/20"
+                />
+              </div>
+
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-zen-muted">
+                  E-mail
+                </p>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="seu@email.com"
+                  className="mt-1.5 w-full rounded-xl border border-zen-border bg-zen-bg px-4 py-2.5 text-[13px] outline-none transition placeholder:text-zinc-600 focus:border-zen-red/60 focus:ring-2 focus:ring-zen-red/20"
+                />
+                <p className="mt-1 text-[11px] text-zen-muted">
+                  É neste e-mail que você recebe o acesso.
+                </p>
+              </div>
+
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-zen-muted">CPF</p>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={cpf}
+                  onChange={(e) => setCpf(maskCpf(e.target.value))}
+                  placeholder="000.000.000-00"
+                  className="mt-1.5 w-full rounded-xl border border-zen-border bg-zen-bg px-4 py-2.5 font-mono text-[13px] outline-none transition placeholder:text-zinc-600 focus:border-zen-red/60 focus:ring-2 focus:ring-zen-red/20"
+                />
+              </div>
+
+              {erroDados && (
+                <p className="rounded-lg border border-zen-red/30 bg-zen-red/10 px-3 py-2 text-[12.5px] font-medium text-zen-red-bright">
+                  {erroDados}
+                </p>
+              )}
+
+              <button
+                type="submit"
+                className="mt-1 w-full rounded-xl bg-gradient-to-r from-zen-red to-zen-red-dark py-3 text-sm font-bold text-white shadow-red-soft transition hover:brightness-110 active:scale-[0.99]"
+              >
+                Continuar para o pagamento
+              </button>
+            </form>
+          ) : (
+          <>
           {/* Tabs de método */}
           {methods.length > 1 && (
             <div
@@ -326,6 +476,8 @@ export default function Checkout({ linkId }: { linkId: string }) {
                 Seus dados são criptografados de ponta a ponta
               </p>
             </form>
+          )}
+          </>
           )}
         </section>
       </main>

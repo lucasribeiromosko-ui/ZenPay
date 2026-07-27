@@ -74,9 +74,16 @@ type SidebarProps = {
   onNavigate: (label: string) => void;
   open: boolean;
   onClose: () => void;
+  onCreateProduct: () => void;
 };
 
-export default function Sidebar({ active, onNavigate, open, onClose }: SidebarProps) {
+export default function Sidebar({
+  active,
+  onNavigate,
+  open,
+  onClose,
+  onCreateProduct,
+}: SidebarProps) {
   function go(label: string) {
     onNavigate(label);
     onClose();
@@ -117,7 +124,10 @@ export default function Sidebar({ active, onNavigate, open, onClose }: SidebarPr
       {/* CTA */}
       <div className="px-4 pb-2 pt-3">
         <button
-          onClick={() => go("Produtos & Checkouts")}
+          onClick={() => {
+            onClose();
+            onCreateProduct();
+          }}
           className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-zen-red to-zen-red-dark px-4 py-2.5 text-sm font-semibold text-white shadow-red-soft transition hover:brightness-110"
         >
           <IconPlus className="h-4 w-4" />
