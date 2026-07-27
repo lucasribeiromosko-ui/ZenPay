@@ -1,0 +1,46 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  background: #0a0a0b;
+  color: #f4f4f5;
+  min-height: 100%;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #2a2a2e transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: #2a2a2e;
+  border-radius: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.zen-gradient-hero {
+  background:
+    radial-gradient(ellipse 80% 120% at 85% 20%, rgba(220, 38, 38, 0.55), transparent 60%),
+    radial-gradient(ellipse 60% 100% at 60% 90%, rgba(127, 29, 29, 0.6), transparent 55%),
+    radial-gradient(ellipse 50% 80% at 95% 80%, rgba(239, 68, 68, 0.35), transparent 60%),
+    linear-gradient(135deg, #18181b 0%, #111113 45%, #1c0a0a 100%);
+}
+
+.zen-glass {
+  background: rgba(22, 22, 24, 0.75);
+  backdrop-filter: blur(12px);
+}
