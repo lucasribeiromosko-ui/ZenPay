@@ -112,3 +112,103 @@ export async function chargeCard(input: CardChargeInput): Promise<CardChargeResu
     id: data.id,
   };
 }
+
+// ------------------------------------------------------------
+//  PIX
+// ------------------------------------------------------------
+
+export type PixChargeInput = {
+  transactionAmount: number;
+  description: string;
+  payer: { email: string; firstName?: string; docType?: string; docNumber?: string };
+  idempotencyKey: string;
+};
+
+export type PixChargeResult = {
+  ok: boolean;
+  id?: string | number;
+  status?: string;
+  /** PIX copia e cola. */
+  qrCode?: string;
+  /** Imagem do QR em base64 (sem o prefixo data:). */
+  qrCodeBase64?: string;
+  message?: string;
+};
+
+export async function chargePix(input: PixChargeInput): Promise<PixChargeResult> {
+  const accessToken = process.env.MP_ACCESS_TOKEN;
+  if (!accessToken) {
+    return { ok: false, message: "Mercado Pago não configurado." };
+  }
+
+  const body = {
+    transaction_amount: Number(input.transactionAmount.toFixed(2)),
+    description: input.description,
+    payment_method_id: "pix",
+    payer: {
+      email: input.payer.email,
+      first_name: input.payer.firstName,
+      ...(input.payer.docType && input.payer.docNumber
+        ? { identification: { type: input.payer.docType, number: input.payer.docNumber } }
+        : {}),
+    },
+  };
+
+  let res: Response;
+  try {
+    res = await fetch(MP_PAYMENTS_API, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+        "X-Idempotency-Key": input.idempotencyKey,
+      },
+      body: JSON.stringify(body),
+    });
+  } catch {
+    return { ok: false, message: "Não foi possível falar com o Mercado Pago." };
+  }
+
+  const data = (await res.json().catch(() => ({}))) as {
+    id?: string | number;
+    status?: string;
+    message?: string;
+    point_of_interaction?: {
+      transaction_data?: { qr_code?: string; qr_code_base64?: string };
+    };
+  };
+
+  if (!res.ok) {
+    return { ok: false, message: data.message ?? "Falha ao gerar o PIX." };
+  }
+
+  const td = data.point_of_interaction?.transaction_data;
+  return {
+    ok: true,
+    id: data.id,
+    status: data.status,
+    qrCode: td?.qr_code,
+    qrCodeBase64: td?.qr_code_base64,
+  };
+}
+
+/** Consulta o status de um pagamento (para saber se o PIX foi pago). */
+export async function getPaymentStatus(
+  id: string
+): Promise<{ ok: boolean; status?: string; message?: string }> {
+  const accessToken = process.env.MP_ACCESS_TOKEN;
+  if (!accessToken) return { ok: false, message: "Mercado Pago não configurado." };
+
+  let res: Response;
+  try {
+    res = await fetch(`${MP_PAYMENTS_API}/${encodeURIComponent(id)}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+  } catch {
+    return { ok: false, message: "Falha de rede." };
+  }
+
+  const data = (await res.json().catch(() => ({}))) as { status?: string; message?: string };
+  if (!res.ok) return { ok: false, message: data.message ?? "Falha ao consultar." };
+  return { ok: true, status: data.status };
+}

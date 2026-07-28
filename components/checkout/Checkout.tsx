@@ -1,8 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import FakeQr from "./FakeQr";
+import MercadoPagoCard from "./MercadoPagoCard";
+import MercadoPagoPix from "./MercadoPagoPix";
+import { mercadoPagoEnabled, mpTestMode } from "@/lib/mpClient";
 import { evaluateSandboxCard, TEST_CARDS } from "@/lib/sandbox";
 import {
   IconZen,
@@ -144,6 +147,14 @@ export default function Checkout({ linkId }: { linkId: string }) {
 
   const parcelaOptions = Array.from({ length: maxParcelas }, (_, i) => i + 1);
 
+  const mpOn = mercadoPagoEnabled();
+  const testMode = mpTestMode();
+
+  const aprovarPagamento = useCallback(() => {
+    setAprovado(null);
+    setPaid(true);
+  }, []);
+
   if (paid) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-zen-bg p-4">
@@ -152,15 +163,16 @@ export default function Checkout({ linkId }: { linkId: string }) {
             <IconCheck className="h-8 w-8" />
           </span>
           <h1 className="mt-4 text-xl font-extrabold">Pagamento aprovado!</h1>
-          {aprovado && method !== "pix" && (
+          {aprovado?.last4 && method !== "pix" && (
             <p className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-zen-border bg-zen-bg px-3 py-1 text-[12px] font-semibold text-zinc-300">
               <IconCard className="h-3.5 w-3.5" />
               {aprovado.brand} •••• {aprovado.last4}
             </p>
           )}
           <p className="mt-3 text-[13.5px] leading-relaxed text-zen-muted">
-            Pagamento aprovado no <span className="font-semibold text-amber-400">modo teste</span>.
-            Nenhuma cobrança real foi feita e nenhum dado de cartão foi guardado.
+            {testMode
+              ? "Pagamento aprovado no modo teste — nenhuma cobrança real foi feita."
+              : "Pagamento aprovado. Você vai receber a confirmação por e-mail."}
           </p>
           <button
             onClick={() => {
@@ -178,11 +190,15 @@ export default function Checkout({ linkId }: { linkId: string }) {
 
   return (
     <div className="min-h-screen bg-zen-bg">
-      {/* Faixa de modo teste */}
-      <div className="flex items-center justify-center gap-2 bg-amber-500/15 px-4 py-1.5 text-center text-[12px] font-semibold text-amber-300">
-        <IconLock className="h-3.5 w-3.5" />
-        Modo sandbox (teste) — nenhuma cobrança real. Cartões reais não são processados nem guardados.
-      </div>
+      {/* Faixa de modo teste (some quando estiver em produção) */}
+      {testMode && (
+        <div className="flex items-center justify-center gap-2 bg-amber-500/15 px-4 py-1.5 text-center text-[12px] font-semibold text-amber-300">
+          <IconLock className="h-3.5 w-3.5" />
+          {mpOn
+            ? "Ambiente de teste do Mercado Pago — use os cartões de teste; nenhuma cobrança real."
+            : "Modo sandbox — nenhuma cobrança real. Cartões reais não são processados nem guardados."}
+        </div>
+      )}
 
       {/* Header */}
       <header className="border-b border-zen-border bg-zen-surface/80 backdrop-blur-md">
@@ -373,6 +389,15 @@ export default function Checkout({ linkId }: { linkId: string }) {
           )}
 
           {method === "pix" ? (
+            mpOn ? (
+              <MercadoPagoPix
+                amount={valor}
+                description={desc}
+                defaultEmail={modoCompleto ? email : undefined}
+                defaultName={modoCompleto ? nome : undefined}
+                onApproved={aprovarPagamento}
+              />
+            ) : (
             <div className="flex flex-col items-center">
               <p className="text-[13.5px] font-semibold">
                 Escaneie o QR Code com o app do seu banco
@@ -415,6 +440,16 @@ export default function Checkout({ linkId }: { linkId: string }) {
                 Já paguei, verificar pagamento
               </button>
             </div>
+            )
+          ) : mpOn ? (
+            <MercadoPagoCard
+              amount={valor}
+              maxInstallments={method === "credito" ? maxParcelas : 1}
+              description={desc}
+              payerEmail={modoCompleto ? email : undefined}
+              tipo={method === "debito" ? "debito" : "credito"}
+              onApproved={aprovarPagamento}
+            />
           ) : (
             <form onSubmit={pagarCartao} className="space-y-3.5">
               <div className="flex items-center justify-between gap-2">
