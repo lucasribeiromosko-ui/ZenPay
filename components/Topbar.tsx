@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { IconHeadset, IconGlobe, IconUser, IconLogout, IconZen, IconMenu } from "./icons";
+import { IconUser, IconLogout, IconZen, IconMenu } from "./icons";
 
 type TopbarProps = {
   userName: string | null;
@@ -34,16 +34,7 @@ export default function Topbar({ userName, onLogout, onOpenMenu }: TopbarProps) 
       <div className="hidden lg:block" />
 
       <div className="flex items-center gap-2">
-        <button className="hidden items-center gap-2 rounded-full border border-zen-red/40 bg-zen-red/10 px-4 py-1.5 text-[13px] font-semibold text-zen-red-bright transition hover:bg-zen-red/20 sm:flex">
-          <IconHeadset className="h-4 w-4" />
-          Falar com Gerente
-        </button>
-        <button className="hidden items-center gap-2 rounded-full border border-zinc-600/60 bg-white/5 px-4 py-1.5 text-[13px] font-semibold text-zinc-300 transition hover:bg-white/10 sm:flex">
-          <IconGlobe className="h-4 w-4" />
-          Grupo Networking
-        </button>
-
-        <div className="relative ml-1">
+        <div className="relative">
           <button
             onClick={() => setMenuOpen((v) => !v)}
             className="flex h-9 w-9 items-center justify-center rounded-full border border-zen-border bg-zen-card text-zinc-300 transition hover:border-zen-red/50 hover:text-white"

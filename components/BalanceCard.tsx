@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { IconQr, IconSend, IconUser, IconEye, IconEyeOff } from "./icons";
+import { IconQr, IconSend, IconEye, IconEyeOff } from "./icons";
 
 export default function BalanceCard({
   onQuickPay,
@@ -46,11 +46,10 @@ export default function BalanceCard({
         </p>
 
         {/* Ações rápidas */}
-        <div className="grid max-w-md grid-cols-3 overflow-hidden rounded-2xl bg-gradient-to-r from-zen-red to-zen-red-dark shadow-red-soft">
+        <div className="grid max-w-sm grid-cols-2 overflow-hidden rounded-2xl bg-gradient-to-r from-zen-red to-zen-red-dark shadow-red-soft">
           {[
             { label: "Pagamento Rápido", icon: <IconQr className="h-5 w-5" />, action: onQuickPay },
             { label: "Transferir", icon: <IconSend className="h-5 w-5" />, action: undefined },
-            { label: "Personalizar Identificador", icon: <IconUser className="h-5 w-5" />, action: undefined },
           ].map((action, i) => (
             <button
               key={action.label}
