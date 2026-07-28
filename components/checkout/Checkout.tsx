@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import FakeQr from "./FakeQr";
+import { evaluateSandboxCard, TEST_CARDS } from "@/lib/sandbox";
 import {
   IconZen,
   IconPix,
@@ -12,6 +13,7 @@ import {
   IconShield,
   IconClock,
   IconLock,
+  IconClose,
 } from "../icons";
 
 type Method = "pix" | "credito" | "debito";
@@ -65,6 +67,31 @@ export default function Checkout({ linkId }: { linkId: string }) {
   const [cardCvv, setCardCvv] = useState("");
   const [parcelas, setParcelas] = useState(1);
   const [paid, setPaid] = useState(false);
+  const [cardErro, setCardErro] = useState<string | null>(null);
+  const [aprovado, setAprovado] = useState<{ brand: string; last4: string } | null>(null);
+  const [mostrarTestes, setMostrarTestes] = useState(false);
+
+  function pagarCartao(e: React.FormEvent) {
+    e.preventDefault();
+    if (!cardName.trim()) {
+      setCardErro("Informe o nome impresso no cartão.");
+      return;
+    }
+    // Avaliação 100% no navegador. Número e CVV não são guardados
+    // nem enviados: a função devolve só bandeira e 4 últimos dígitos.
+    const r = evaluateSandboxCard(cardNum, cardExp, cardCvv);
+    if (!r.ok) {
+      setCardErro(r.reason);
+      setAprovado(null);
+      return;
+    }
+    setCardErro(null);
+    setAprovado({ brand: r.brand, last4: r.last4 });
+    // Descarta os dados sensíveis imediatamente após avaliar.
+    setCardNum("");
+    setCardCvv("");
+    setPaid(true);
+  }
 
   // Dados do comprador (checkout completo)
   const [step, setStep] = useState<"dados" | "pagamento">(
@@ -124,13 +151,22 @@ export default function Checkout({ linkId }: { linkId: string }) {
           <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-400">
             <IconCheck className="h-8 w-8" />
           </span>
-          <h1 className="mt-4 text-xl font-extrabold">Pagamento simulado!</h1>
-          <p className="mt-2 text-[13.5px] leading-relaxed text-zen-muted">
-            Este checkout ainda é uma demonstração visual. Quando a API estiver conectada, o
-            pagamento será processado de verdade por aqui.
+          <h1 className="mt-4 text-xl font-extrabold">Pagamento aprovado!</h1>
+          {aprovado && method !== "pix" && (
+            <p className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-zen-border bg-zen-bg px-3 py-1 text-[12px] font-semibold text-zinc-300">
+              <IconCard className="h-3.5 w-3.5" />
+              {aprovado.brand} •••• {aprovado.last4}
+            </p>
+          )}
+          <p className="mt-3 text-[13.5px] leading-relaxed text-zen-muted">
+            Pagamento aprovado no <span className="font-semibold text-amber-400">modo teste</span>.
+            Nenhuma cobrança real foi feita e nenhum dado de cartão foi guardado.
           </p>
           <button
-            onClick={() => setPaid(false)}
+            onClick={() => {
+              setPaid(false);
+              setAprovado(null);
+            }}
             className="mt-6 w-full rounded-xl bg-gradient-to-r from-zen-red to-zen-red-dark py-2.5 text-sm font-bold text-white shadow-red-soft transition hover:brightness-110"
           >
             Voltar ao checkout
@@ -142,6 +178,12 @@ export default function Checkout({ linkId }: { linkId: string }) {
 
   return (
     <div className="min-h-screen bg-zen-bg">
+      {/* Faixa de modo teste */}
+      <div className="flex items-center justify-center gap-2 bg-amber-500/15 px-4 py-1.5 text-center text-[12px] font-semibold text-amber-300">
+        <IconLock className="h-3.5 w-3.5" />
+        Modo sandbox (teste) — nenhuma cobrança real. Cartões reais não são processados nem guardados.
+      </div>
+
       {/* Header */}
       <header className="border-b border-zen-border bg-zen-surface/80 backdrop-blur-md">
         <div className="mx-auto flex h-14 max-w-[960px] items-center justify-between px-4">
@@ -374,16 +416,52 @@ export default function Checkout({ linkId }: { linkId: string }) {
               </button>
             </div>
           ) : (
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                setPaid(true);
-              }}
-              className="space-y-3.5"
-            >
-              <p className="text-[13.5px] font-semibold">
-                {method === "credito" ? "Pagar com cartão de crédito" : "Pagar com cartão de débito"}
-              </p>
+            <form onSubmit={pagarCartao} className="space-y-3.5">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-[13.5px] font-semibold">
+                  {method === "credito"
+                    ? "Pagar com cartão de crédito"
+                    : "Pagar com cartão de débito"}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setMostrarTestes((v) => !v)}
+                  className="text-[11.5px] font-semibold text-amber-400 transition hover:brightness-125"
+                >
+                  Cartões de teste
+                </button>
+              </div>
+
+              {mostrarTestes && (
+                <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3">
+                  <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-amber-400">
+                    Use um destes no sandbox
+                  </p>
+                  <ul className="space-y-1">
+                    {TEST_CARDS.map((c) => (
+                      <li key={c.pan} className="flex items-center justify-between gap-2 text-[12px]">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCardNum(c.pan);
+                            setCardExp("12/30");
+                            setCardCvv("123");
+                            setCardName(cardName || "TESTE ZENPAY");
+                          }}
+                          className="font-mono text-zinc-200 transition hover:text-white"
+                          title="Preencher"
+                        >
+                          {c.pan}
+                        </button>
+                        <span className="text-zen-muted">{c.label}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="mt-2 text-[11px] text-zen-muted">
+                    Validade: qualquer data futura · CVV: 3 dígitos
+                  </p>
+                </div>
+              )}
 
               <div>
                 <p className="text-[11px] font-bold uppercase tracking-wider text-zen-muted">
@@ -463,6 +541,13 @@ export default function Checkout({ linkId }: { linkId: string }) {
                 </div>
               )}
 
+              {cardErro && (
+                <p className="flex items-start gap-2 rounded-lg border border-zen-red/30 bg-zen-red/10 px-3 py-2 text-[12.5px] font-medium text-zen-red-bright">
+                  <IconClose className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                  {cardErro}
+                </p>
+              )}
+
               <button
                 type="submit"
                 className="mt-1 w-full rounded-xl bg-gradient-to-r from-zen-red to-zen-red-dark py-3 text-sm font-bold text-white shadow-red-soft transition hover:brightness-110 active:scale-[0.99]"
@@ -473,7 +558,7 @@ export default function Checkout({ linkId }: { linkId: string }) {
 
               <p className="flex items-center justify-center gap-1.5 text-[11px] text-zinc-600">
                 <IconLock className="h-3 w-3" />
-                Seus dados são criptografados de ponta a ponta
+                Modo teste · número e CVV não são guardados
               </p>
             </form>
           )}

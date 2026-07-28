@@ -12,6 +12,7 @@ import {
   IconExternal,
   IconPlus,
   IconTrendUp,
+  IconLock,
 } from "../icons";
 
 type PayLink = {
@@ -260,6 +261,13 @@ export default function PaymentLinksPage() {
                   icon={<IconCard className="h-4.5 w-4.5" />}
                 />
               </div>
+              {(credito || debito) && (
+                <p className="mt-2 flex items-start gap-1.5 rounded-lg border border-amber-500/25 bg-amber-500/5 px-2.5 py-1.5 text-[11px] leading-snug text-amber-300/90">
+                  <IconLock className="mt-0.5 h-3 w-3 shrink-0" />
+                  Cartão em modo sandbox (teste): só cartões de teste passam e nenhum
+                  dado de cartão é guardado.
+                </p>
+              )}
             </div>
 
             {credito && (

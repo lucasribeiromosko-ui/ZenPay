@@ -8,7 +8,7 @@ import {
   centsFromInput,
   newProductId,
 } from "@/lib/products";
-import { IconClose, IconBox, IconPix, IconCard, IconUsers, IconZen } from "./icons";
+import { IconClose, IconBox, IconPix, IconCard, IconUsers, IconZen, IconLock } from "./icons";
 
 function MethodToggle({
   checked,
@@ -237,6 +237,13 @@ export default function ProductModal({
                 icon={<IconCard className="h-4 w-4" />}
               />
             </div>
+            {(credito || debito) && (
+              <p className="mt-2 flex items-start gap-1.5 rounded-lg border border-amber-500/25 bg-amber-500/5 px-2.5 py-1.5 text-[11px] leading-snug text-amber-300/90">
+                <IconLock className="mt-0.5 h-3 w-3 shrink-0" />
+                Cartão está em modo sandbox (teste): só cartões de teste passam e
+                nenhum dado de cartão é guardado.
+              </p>
+            )}
           </div>
 
           {credito && (
