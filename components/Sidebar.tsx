@@ -5,8 +5,6 @@ import {
   IconChart,
   IconCard,
   IconUsers,
-  IconBot,
-  IconSparkles,
   IconBox,
   IconPalette,
   IconGlobe,
@@ -14,9 +12,9 @@ import {
   IconWallet,
   IconBitcoin,
   IconBell,
-  IconGift,
   IconPlus,
   IconLink,
+  IconLock,
   IconClose,
   IconZen,
 } from "./icons";
@@ -25,6 +23,8 @@ type NavItem = {
   label: string;
   icon: React.ReactNode;
   badge?: { text: string; variant: "soon" | "new" };
+  /** Recurso ainda não disponível — aparece com cadeado. */
+  locked?: boolean;
 };
 
 type NavSection = {
@@ -43,10 +43,8 @@ const sections: NavSection[] = [
     ],
   },
   {
-    title: "Automações",
+    title: "Vendas",
     items: [
-      { label: "Bot Telegram", icon: <IconBot /> },
-      { label: "Agent IA", icon: <IconSparkles />, badge: { text: "EM BREVE", variant: "soon" } },
       { label: "Produtos & Checkouts", icon: <IconBox /> },
       { label: "Links de Pagamento", icon: <IconLink /> },
       { label: "Temas", icon: <IconPalette />, badge: { text: "NOVO", variant: "new" } },
@@ -55,15 +53,15 @@ const sections: NavSection[] = [
   {
     title: "Integrações",
     items: [
-      { label: "Trackeamento", icon: <IconGlobe /> },
-      { label: "API & Webhooks", icon: <IconApi /> },
+      { label: "Trackeamento", icon: <IconGlobe />, locked: true },
+      { label: "API & Webhooks", icon: <IconApi />, locked: true },
     ],
   },
   {
     title: "Configurações",
     items: [
       { label: "Recebimento", icon: <IconWallet /> },
-      { label: "Saque em Cripto", icon: <IconBitcoin /> },
+      { label: "Saque em Cripto", icon: <IconBitcoin />, locked: true },
       { label: "Notificações", icon: <IconBell /> },
     ],
   },
@@ -159,6 +157,11 @@ export default function Sidebar({
                         {item.icon}
                       </span>
                       <span className="truncate">{item.label}</span>
+                      {item.locked && (
+                        <span className="ml-auto text-zinc-600" title="Ainda não disponível">
+                          <IconLock className="h-3.5 w-3.5" />
+                        </span>
+                      )}
                       {item.badge && (
                         <span
                           className={`ml-auto rounded-full px-2 py-0.5 text-[9px] font-bold tracking-wide ${
@@ -179,19 +182,8 @@ export default function Sidebar({
         ))}
       </nav>
 
-      {/* Indicações + faturamento */}
-      <div className="space-y-3 border-t border-zen-border px-4 py-4">
-        <button
-          onClick={() => go("Indicações")}
-          className="flex w-full items-center gap-2.5 rounded-xl border border-zen-red/30 bg-zen-red/10 px-3 py-2.5 text-sm font-semibold text-zen-red-bright transition hover:bg-zen-red/20"
-        >
-          <IconGift className="h-4 w-4" />
-          Indicações
-          <span className="ml-auto rounded-full bg-zen-red px-2 py-0.5 text-[9px] font-bold text-white">
-            GANHE $
-          </span>
-        </button>
-
+      {/* Faturamento */}
+      <div className="border-t border-zen-border px-4 py-4">
         <div className="flex items-center gap-3 rounded-xl bg-zen-card px-3 py-2.5">
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-400">
             <span className="text-sm font-bold">$</span>

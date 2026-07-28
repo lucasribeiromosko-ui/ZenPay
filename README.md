@@ -44,11 +44,13 @@ O checkout em `/pay/[id]` é público e não exige login, como tem que ser.
 - **Produtos & Checkouts** — cria produtos e gera checkout para cada um
 - **Links de Pagamento** — cria link avulso com valor e formas de pagamento
 - **Temas** — bio link estilo Linktree com pré-visualização
-- **Trackeamento** — Meta, Google Ads, TikTok e GTM
-- **API & Webhooks** — chaves de demonstração e endpoints
-- **Recebimento**, **Saque em Cripto**, **Notificações**, **Indicações**
+- **Recebimento** — chave PIX, conta bancária e tabela de taxas
+- **Notificações** — eventos de venda, canais e resumos
 
-Bot Telegram e Agent IA aparecem no menu, mas não foram construídos.
+**Saque em Cripto**, **Trackeamento** e **API & Webhooks** aparecem no menu com
+cadeado: são recursos ainda não disponíveis e abrem uma tela explicando o que
+virá. Para liberar um deles, tire o `locked: true` do item em
+`components/Sidebar.tsx` e o nome da lista `LOCKED` em `components/Dashboard.tsx`.
 
 ### Formas de pagamento
 
