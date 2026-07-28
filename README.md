@@ -156,6 +156,39 @@ Para ligar a cobrança real:
 O backend fica em `app/api/pay/card/route.ts` e a lógica em
 `lib/mercadopago.ts`.
 
+## Área de admin (`/admin`)
+
+Painel de operador, separado do painel do vendedor. Só o e-mail
+`lucasribeiromosko@gmail.com` entra, com senha verificada no servidor.
+Mostra as contas, saldos e volume, e permite **travar conta**, **travar
+saldo** e **banir conta**. Não expõe dado de cartão — não é para isso.
+
+Para ligar:
+
+| Nome | Valor |
+| --- | --- |
+| `ADMIN_PASSWORD` | senha do admin (na Vercel, secreta) |
+| `AUTH_SECRET` | usado para assinar o cookie de sessão do admin |
+
+Enquanto o banco não está ligado, as contas do admin são de
+**demonstração** (localStorage) e as ações agem sobre elas. Quando o
+back-end entrar, o painel passa a ler as contas reais e as ações precisam
+ser aplicadas no login/checkout do vendedor (bloquear quem está travado ou
+banido). O login já é verificado no servidor com cookie httpOnly.
+
+## Segurança — pontos conhecidos a resolver com o back-end
+
+- **Preço vem do cliente.** Hoje o valor da cobrança chega pela URL do
+  checkout. O servidor valida faixa de sanidade, mas o certo é buscar o
+  preço pelo id do produto/link no banco e ignorar o valor do navegador.
+  É o item nº 1 a corrigir quando o Neon entrar.
+- **Login do vendedor é visual.** O `zenpay_user` é só localStorage; a
+  autenticação real do vendedor ainda não existe.
+- **Contas do admin são demo.** As ações de travar/banir só valem de
+  verdade quando forem verificadas no back-end a cada acesso do vendedor.
+- Segredos (`MP_ACCESS_TOKEN`, `ADMIN_PASSWORD`, `AUTH_SECRET`) só são
+  lidos no servidor e nunca vão para o bundle do navegador.
+
 ## Próximos passos
 
 1. Ligar a aplicação ao Neon, substituindo o `localStorage`

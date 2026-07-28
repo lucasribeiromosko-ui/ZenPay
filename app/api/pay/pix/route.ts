@@ -21,11 +21,13 @@ export async function POST(req: Request) {
   const amount = Number(payload.amount);
   const email = typeof payload.email === "string" ? payload.email : "";
 
-  if (!amount || !email) {
-    return NextResponse.json(
-      { ok: false, message: "Informe o e-mail e o valor." },
-      { status: 400 }
-    );
+  if (!email) {
+    return NextResponse.json({ ok: false, message: "Informe o e-mail." }, { status: 400 });
+  }
+
+  // Sanidade do valor (ver observação em /api/pay/card).
+  if (!Number.isFinite(amount) || amount < 0.5 || amount > 100000) {
+    return NextResponse.json({ ok: false, message: "Valor inválido." }, { status: 400 });
   }
 
   try {

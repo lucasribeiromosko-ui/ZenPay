@@ -30,11 +30,18 @@ export async function POST(req: Request) {
     typeof payload.paymentMethodId === "string" ? payload.paymentMethodId : "";
   const email = typeof payload.email === "string" ? payload.email : "";
 
-  if (!token || !amount || !paymentMethodId || !email) {
+  if (!token || !paymentMethodId || !email) {
     return NextResponse.json(
       { ok: false, message: "Dados de pagamento incompletos." },
       { status: 400 }
     );
+  }
+
+  // Sanidade do valor. Obs.: hoje o valor vem do cliente — quando o banco
+  // entrar, o servidor deve buscar o preço pelo id do produto/link e ignorar
+  // o valor enviado pelo navegador.
+  if (!Number.isFinite(amount) || amount < 0.5 || amount > 100000) {
+    return NextResponse.json({ ok: false, message: "Valor inválido." }, { status: 400 });
   }
 
   try {

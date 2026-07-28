@@ -442,6 +442,42 @@ export function IconClose({ className }: IconProps) {
   );
 }
 
+export function IconBan({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className ?? base}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M5.6 5.6l12.8 12.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function IconUnlock({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className ?? base}>
+      <rect x="5" y="10.5" width="14" height="10" rx="2" />
+      <path d="M8 10.5V8a4 4 0 017.5-1.9" strokeLinecap="round" />
+      <circle cx="12" cy="15.5" r="1.3" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+export function IconSnow({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className ?? base}>
+      <path d="M12 2v20M4.5 6.5l15 11M19.5 6.5l-15 11" strokeLinecap="round" />
+      <path d="M12 5l2-2M12 5l-2-2M12 19l2 2M12 19l-2 2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function IconShieldAlt({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className ?? base}>
+      <path d="M12 3l7.5 3v5.5c0 4.5-3 8-7.5 9.5-4.5-1.5-7.5-5-7.5-9.5V6L12 3z" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export function IconZen({ className }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className={className ?? base}>
