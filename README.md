@@ -125,6 +125,37 @@ Valores em dinheiro são guardados em **centavos** (`INTEGER`), nunca em
 | `api_keys` | Chaves pública e secreta (secreta só em hash) |
 | `tracking_pixels` | Meta, Google Ads, TikTok e GTM |
 
+## Cartão real via Mercado Pago
+
+O checkout já tem a base para cobrar cartão de verdade com tokenização —
+o dado do cartão vai do navegador direto pro Mercado Pago, e o nosso
+servidor recebe só um token. Número de cartão e CVV não passam pelo
+servidor e não são armazenados.
+
+Enquanto as variáveis abaixo não estiverem preenchidas, o cartão continua
+em **modo sandbox** (cartões de teste, sem cobrança real).
+
+Para ligar a cobrança real:
+
+1. No painel do Mercado Pago (Suas integrações → sua aplicação), pegue as
+   credenciais de **Teste** primeiro. São duas:
+   - **Public Key** — vai no frontend, pode ser exposta.
+   - **Access Token** — segredo, só no servidor. Nunca no frontend, nunca
+     no git, nunca colado em chat.
+2. Na Vercel (**Settings → Environment Variables**) adicione:
+
+   | Nome | Valor |
+   | --- | --- |
+   | `NEXT_PUBLIC_MP_PUBLIC_KEY` | Public Key (TEST-…) |
+   | `MP_ACCESS_TOKEN` | Access Token de teste (secreto) |
+
+3. Redeploy. Teste com os cartões de teste do Mercado Pago.
+4. Quando estiver tudo certo, troque pelas credenciais de **Produção** para
+   cobrar de verdade.
+
+O backend fica em `app/api/pay/card/route.ts` e a lógica em
+`lib/mercadopago.ts`.
+
 ## Próximos passos
 
 1. Ligar a aplicação ao Neon, substituindo o `localStorage`
