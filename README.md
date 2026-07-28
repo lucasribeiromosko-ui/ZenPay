@@ -79,11 +79,53 @@ dispositivos — é proposital enquanto o back-end não existe.
 ## Deploy
 
 Hospedado na Vercel, com deploy de produção a partir da branch `main`. O
-projeto é Next.js padrão, sem variáveis de ambiente obrigatórias no momento.
+`vercel.json` fixa o framework como Next.js — importante porque o repositório
+foi importado quando só tinha o README, e sem isso a Vercel trata o projeto
+como site estático e devolve 404.
+
+Se a produção ficar presa numa implantação antiga, confira em
+**Settings → Build and Deployment** se o Framework Preset está em *Next.js* e
+se o Root Directory está vazio (a raiz do repositório).
+
+## Banco de dados (Neon)
+
+O banco ainda não está ligado à aplicação, mas o schema já está pronto em
+[`db/schema.sql`](db/schema.sql). Para preparar:
+
+1. No console do Neon, abra o **SQL Editor** e execute o conteúdo de
+   `db/schema.sql`. Ele cria as tabelas e pode ser rodado mais de uma vez.
+2. Copie a connection string do Neon — use a do **pooler** (o host tem
+   `-pooler`), que é a recomendada para funções serverless.
+3. Na Vercel, em **Settings → Environment Variables**, adicione:
+
+   | Nome | Valor |
+   | --- | --- |
+   | `DATABASE_URL` | a connection string do pooler |
+   | `AUTH_SECRET` | valor aleatório (`openssl rand -base64 32`) |
+
+4. Faça um redeploy para as variáveis valerem.
+
+Valores em dinheiro são guardados em **centavos** (`INTEGER`), nunca em
+`float` — é o que evita erro de arredondamento em cobrança.
+
+### Tabelas
+
+| Tabela | Guarda |
+| --- | --- |
+| `users` | Vendedores que entram no painel |
+| `payout_settings` | Chave PIX, conta bancária e carteira cripto |
+| `products` | Produtos e a configuração de checkout de cada um |
+| `payment_links` | Links de pagamento avulsos |
+| `customers` | Compradores/leads do checkout completo |
+| `transactions` | Cada cobrança, com método, status, taxa e líquido |
+| `withdrawals` | Saques em PIX e em cripto |
+| `webhooks` | Endpoints que recebem os eventos |
+| `api_keys` | Chaves pública e secreta (secreta só em hash) |
+| `tracking_pixels` | Meta, Google Ads, TikTok e GTM |
 
 ## Próximos passos
 
-1. Banco de dados (Neon/Postgres) para usuários, produtos, links e transações
+1. Ligar a aplicação ao Neon, substituindo o `localStorage`
 2. Autenticação real, substituindo o login visual
 3. Integração com processador de pagamento para PIX e cartão
 4. Webhooks de verdade nos eventos já listados na tela de API
