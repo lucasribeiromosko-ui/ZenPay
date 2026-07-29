@@ -18,6 +18,7 @@ import ThemesPage from "./pages/ThemesPage";
 import PaymentLinksPage from "./pages/PaymentLinksPage";
 import ProductModal from "./ProductModal";
 import { Product, loadProducts, saveProducts } from "@/lib/products";
+import { isAdminEmail } from "@/lib/adminEmails";
 import { ReceivingPage, NotificationsPage } from "./pages/SettingsPages";
 import LockedPage from "./pages/LockedPage";
 import {
@@ -72,6 +73,7 @@ export default function Dashboard() {
         open={menuOpen}
         onClose={() => setMenuOpen(false)}
         onCreateProduct={() => setProductModal(true)}
+        isAdmin={isAdminEmail(user)}
       />
 
       <div className="lg:pl-[248px]">

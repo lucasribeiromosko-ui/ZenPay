@@ -1,17 +1,11 @@
 import crypto from "crypto";
+import { ADMIN_EMAILS } from "./adminEmails";
 
 // Autenticação da área de admin (server-side).
-// Só este e-mail pode entrar, e a senha fica numa variável de ambiente
-// (ADMIN_PASSWORD) — nunca no código.
+// Só os e-mails de ADMIN_EMAILS entram, todos com a mesma senha, que fica
+// numa variável de ambiente (ADMIN_PASSWORD) — nunca no código.
 
-// E-mails com acesso ao painel de admin (comparados em minúsculas).
-// Todos usam a mesma senha (ADMIN_PASSWORD). Senha por usuário só quando
-// houver o back-end de autenticação.
-export const ADMIN_EMAILS = [
-  "lucasribeiromosko@gmail.com",
-  "zenpay.suport@gmail.com",
-  "hypex100kk@gmail.com",
-];
+export { ADMIN_EMAILS };
 
 export const ADMIN_COOKIE = "zenpay_admin";
 

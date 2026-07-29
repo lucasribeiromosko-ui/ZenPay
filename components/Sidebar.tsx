@@ -16,6 +16,7 @@ import {
   IconLink,
   IconLock,
   IconClose,
+  IconShieldAlt,
   IconZen,
 } from "./icons";
 
@@ -73,6 +74,7 @@ type SidebarProps = {
   open: boolean;
   onClose: () => void;
   onCreateProduct: () => void;
+  isAdmin: boolean;
 };
 
 export default function Sidebar({
@@ -81,6 +83,7 @@ export default function Sidebar({
   open,
   onClose,
   onCreateProduct,
+  isAdmin,
 }: SidebarProps) {
   function go(label: string) {
     onNavigate(label);
@@ -182,8 +185,21 @@ export default function Sidebar({
         ))}
       </nav>
 
-      {/* Faturamento */}
-      <div className="border-t border-zen-border px-4 py-4">
+      {/* Rodapé */}
+      <div className="space-y-3 border-t border-zen-border px-4 py-4">
+        {isAdmin && (
+          <a
+            href="/admin"
+            className="flex w-full items-center gap-2.5 rounded-xl border border-zen-red/40 bg-zen-red/10 px-3 py-2.5 text-sm font-semibold text-zen-red-bright transition hover:bg-zen-red/20"
+          >
+            <IconShieldAlt className="h-4 w-4" />
+            Área de Admin
+            <span className="ml-auto rounded-full bg-zen-red px-2 py-0.5 text-[9px] font-bold text-white">
+              STAFF
+            </span>
+          </a>
+        )}
+
         <div className="flex items-center gap-3 rounded-xl bg-zen-card px-3 py-2.5">
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-400">
             <span className="text-sm font-bold">$</span>
