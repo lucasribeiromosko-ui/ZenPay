@@ -15,7 +15,15 @@ export async function GET() {
     await ensureSchema();
     const sql = getSql();
     const rows = (await sql`SELECT count(*)::int AS total FROM users`) as { total: number }[];
-    return NextResponse.json({ configured: true, db: "ok", contas: rows[0]?.total ?? 0 });
+    const authSecret = Boolean(process.env.AUTH_SECRET);
+    return NextResponse.json({
+      configured: true,
+      db: "ok",
+      authSecret,
+      loginPronto: authSecret,
+      aviso: authSecret ? undefined : "Falta AUTH_SECRET — o login real não liga sem ele.",
+      contas: rows[0]?.total ?? 0,
+    });
   } catch (e) {
     return NextResponse.json(
       { configured: true, db: "erro", detalhe: e instanceof Error ? e.message : String(e) },

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { dbConfigured } from "@/lib/db";
+import { authReady } from "@/lib/db";
 import { readSession, getUser, SESSION_COOKIE } from "@/lib/authUsers";
 import { isAdminEmail } from "@/lib/adminEmails";
 
@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   // Sem banco → o front usa o fluxo antigo (localStorage).
-  if (!dbConfigured()) {
+  if (!authReady()) {
     return NextResponse.json({ configured: false, user: null });
   }
 

@@ -10,6 +10,8 @@ export { ADMIN_EMAILS };
 export const ADMIN_COOKIE = "zenpay_admin";
 
 function secret(): string {
+  // Só cai no default em desenvolvimento; em produção o AUTH_SECRET é
+  // exigido pelos checks *Configured (que falham sem ele).
   return process.env.AUTH_SECRET || "zenpay-dev-secret-troque-isto";
 }
 
@@ -53,5 +55,10 @@ export function credentialsOk(email: string, password: string): boolean {
 
 /** Há alguma forma de admin configurada (senha normal ou login-mestre)? */
 export function anyAdminConfigured(): boolean {
-  return adminConfigured() || Boolean(process.env.ADMIN_MASTER_USER && process.env.ADMIN_MASTER_PASSWORD);
+  // Sem AUTH_SECRET o cookie seria forjável — falha de forma segura.
+  if (!process.env.AUTH_SECRET) return false;
+  return (
+    adminConfigured() ||
+    Boolean(process.env.ADMIN_MASTER_USER && process.env.ADMIN_MASTER_PASSWORD)
+  );
 }

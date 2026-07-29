@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { dbConfigured } from "@/lib/db";
+import { authReady } from "@/lib/db";
 import { getUser, verifyPassword, makeSession, SESSION_COOKIE } from "@/lib/authUsers";
 
 export async function POST(req: Request) {
-  if (!dbConfigured()) {
+  if (!authReady()) {
     return NextResponse.json({ ok: false, configured: false }, { status: 503 });
   }
 
