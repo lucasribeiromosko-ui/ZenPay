@@ -1,12 +1,18 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import FakeQr from "./FakeQr";
 import MercadoPagoCard from "./MercadoPagoCard";
 import MercadoPagoPix from "./MercadoPagoPix";
-import { mercadoPagoEnabled, mpTestMode } from "@/lib/mpClient";
 import { evaluateSandboxCard, TEST_CARDS } from "@/lib/sandbox";
+
+type MpConfig = {
+  pixReal: boolean;
+  cardReal: boolean;
+  publicKey: string | null;
+  testMode: boolean;
+};
 import {
   IconZen,
   IconPix,
@@ -147,8 +153,25 @@ export default function Checkout({ linkId }: { linkId: string }) {
 
   const parcelaOptions = Array.from({ length: maxParcelas }, (_, i) => i + 1);
 
-  const mpOn = mercadoPagoEnabled();
-  const testMode = mpTestMode();
+  const [mp, setMp] = useState<MpConfig | null>(null);
+  useEffect(() => {
+    let cancel = false;
+    fetch("/api/pay/config", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((c: MpConfig) => {
+        if (!cancel) setMp(c);
+      })
+      .catch(() => {
+        if (!cancel) setMp({ pixReal: false, cardReal: false, publicKey: null, testMode: true });
+      });
+    return () => {
+      cancel = true;
+    };
+  }, []);
+
+  const pixReal = Boolean(mp?.pixReal);
+  const cardReal = Boolean(mp?.cardReal);
+  const testMode = mp?.testMode ?? true;
 
   const aprovarPagamento = useCallback(() => {
     setAprovado(null);
@@ -194,7 +217,7 @@ export default function Checkout({ linkId }: { linkId: string }) {
       {testMode && (
         <div className="flex items-center justify-center gap-2 bg-amber-500/15 px-4 py-1.5 text-center text-[12px] font-semibold text-amber-300">
           <IconLock className="h-3.5 w-3.5" />
-          {mpOn
+          {pixReal || cardReal
             ? "Ambiente de teste do Mercado Pago — use os cartões de teste; nenhuma cobrança real."
             : "Modo sandbox — nenhuma cobrança real. Cartões reais não são processados nem guardados."}
         </div>
@@ -389,7 +412,7 @@ export default function Checkout({ linkId }: { linkId: string }) {
           )}
 
           {method === "pix" ? (
-            mpOn ? (
+            pixReal ? (
               <MercadoPagoPix
                 amount={valor}
                 description={desc}
@@ -441,8 +464,9 @@ export default function Checkout({ linkId }: { linkId: string }) {
               </button>
             </div>
             )
-          ) : mpOn ? (
+          ) : cardReal && mp?.publicKey ? (
             <MercadoPagoCard
+              publicKey={mp.publicKey}
               amount={valor}
               maxInstallments={method === "credito" ? maxParcelas : 1}
               description={desc}

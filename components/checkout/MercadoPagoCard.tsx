@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { MP_PUBLIC_KEY } from "@/lib/mpClient";
 import { IconClose, IconLock } from "../icons";
 
 // Campo de cartão seguro do Mercado Pago (Card Payment Brick).
@@ -15,8 +14,6 @@ declare global {
     MercadoPago?: any;
   }
 }
-
-const PUBLIC_KEY = MP_PUBLIC_KEY;
 
 let sdkPromise: Promise<void> | null = null;
 function loadSdk(): Promise<void> {
@@ -35,6 +32,7 @@ function loadSdk(): Promise<void> {
 }
 
 type Props = {
+  publicKey: string;
   amount: number;
   maxInstallments: number;
   description: string;
@@ -44,6 +42,7 @@ type Props = {
 };
 
 export default function MercadoPagoCard({
+  publicKey,
   amount,
   maxInstallments,
   description,
@@ -64,7 +63,7 @@ export default function MercadoPagoCard({
         await loadSdk();
         if (cancelled || !window.MercadoPago) return;
 
-        const mp = new window.MercadoPago(PUBLIC_KEY, { locale: "pt-BR" });
+        const mp = new window.MercadoPago(publicKey, { locale: "pt-BR" });
         const bricks = mp.bricks();
 
         controller = await bricks.create("cardPayment", "zenpay-mp-card", {
@@ -141,7 +140,7 @@ export default function MercadoPagoCard({
         // brick já desmontado
       }
     };
-  }, [amount, maxInstallments, description, payerEmail, tipo, onApproved]);
+  }, [publicKey, amount, maxInstallments, description, payerEmail, tipo, onApproved]);
 
   return (
     <div className="space-y-3">
