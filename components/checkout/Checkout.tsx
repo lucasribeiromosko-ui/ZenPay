@@ -418,6 +418,7 @@ export default function Checkout({ linkId }: { linkId: string }) {
                 description={desc}
                 defaultEmail={modoCompleto ? email : undefined}
                 defaultName={modoCompleto ? nome : undefined}
+                testMode={testMode}
                 onApproved={aprovarPagamento}
               />
             ) : (

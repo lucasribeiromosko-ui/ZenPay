@@ -11,6 +11,7 @@ type Props = {
   description: string;
   defaultEmail?: string;
   defaultName?: string;
+  testMode?: boolean;
   onApproved: () => void;
 };
 
@@ -21,6 +22,7 @@ export default function MercadoPagoPix({
   description,
   defaultEmail,
   defaultName,
+  testMode,
   onApproved,
 }: Props) {
   const [email, setEmail] = useState(defaultEmail ?? "");
@@ -135,6 +137,14 @@ export default function MercadoPagoPix({
         <IconClock className="h-3.5 w-3.5" />
         Aguardando pagamento…
       </div>
+
+      {testMode && (
+        <p className="mt-3 max-w-[280px] text-center text-[11.5px] leading-relaxed text-amber-300/80">
+          PIX de teste: apps de banco reais não pagam este QR. Aprove pelas
+          ferramentas de teste do Mercado Pago, ou use credenciais de produção
+          para um PIX pagável de verdade.
+        </p>
+      )}
 
       <div className="mt-5 w-full">
         <p className="text-[11px] font-bold uppercase tracking-wider text-zen-muted">
