@@ -4,7 +4,15 @@ import crypto from "crypto";
 // Só este e-mail pode entrar, e a senha fica numa variável de ambiente
 // (ADMIN_PASSWORD) — nunca no código.
 
-export const ADMIN_EMAIL = "lucasribeiromosko@gmail.com";
+// E-mails com acesso ao painel de admin (comparados em minúsculas).
+// Todos usam a mesma senha (ADMIN_PASSWORD). Senha por usuário só quando
+// houver o back-end de autenticação.
+export const ADMIN_EMAILS = [
+  "lucasribeiromosko@gmail.com",
+  "zenpay.suport@gmail.com",
+  "hypex100kk@gmail.com",
+];
+
 export const ADMIN_COOKIE = "zenpay_admin";
 
 function secret(): string {
@@ -13,7 +21,7 @@ function secret(): string {
 
 /** Token opaco que vai no cookie httpOnly — assinado com o AUTH_SECRET. */
 export function makeToken(): string {
-  return crypto.createHmac("sha256", secret()).update(ADMIN_EMAIL).digest("hex");
+  return crypto.createHmac("sha256", secret()).update("zenpay-admin").digest("hex");
 }
 
 export function tokenValid(token?: string): boolean {
@@ -34,7 +42,7 @@ export function adminConfigured(): boolean {
 export function credentialsOk(email: string, password: string): boolean {
   return (
     adminConfigured() &&
-    email.trim().toLowerCase() === ADMIN_EMAIL &&
+    ADMIN_EMAILS.includes(email.trim().toLowerCase()) &&
     password === process.env.ADMIN_PASSWORD
   );
 }

@@ -158,8 +158,9 @@ O backend fica em `app/api/pay/card/route.ts` e a lógica em
 
 ## Área de admin (`/admin`)
 
-Painel de operador, separado do painel do vendedor. Só o e-mail
-`lucasribeiromosko@gmail.com` entra, com senha verificada no servidor.
+Painel de operador, separado do painel do vendedor. Entram os e-mails de
+admin (`lucasribeiromosko@gmail.com`, `zenpay.suport@gmail.com` e
+`hypex100kk@gmail.com`), todos com a mesma senha, verificada no servidor.
 Mostra as contas, saldos e volume, e permite **travar conta**, **travar
 saldo** e **banir conta**. Não expõe dado de cartão — não é para isso.
 
