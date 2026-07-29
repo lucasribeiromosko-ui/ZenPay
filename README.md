@@ -177,6 +177,25 @@ back-end entrar, o painel passa a ler as contas reais e as ações precisam
 ser aplicadas no login/checkout do vendedor (bloquear quem está travado ou
 banido). O login já é verificado no servidor com cookie httpOnly.
 
+## Login rígido de vendedores (Neon)
+
+Quando `DATABASE_URL` está configurado, o login vira **real**: a conta é
+criada uma vez (e-mail + senha, senha guardada como hash scrypt), e só se
+acessa de novo com a senha. Sessão em cookie httpOnly assinado.
+
+- `POST /api/auth/register`, `POST /api/auth/login`, `POST /api/auth/logout`,
+  `GET /api/auth/session`
+- Um admin pode redefinir a senha de um vendedor pelo painel `/admin`
+  (`POST /api/admin/reset-password`, só com sessão de admin).
+- Login-mestre de admin: defina `ADMIN_MASTER_USER` e `ADMIN_MASTER_PASSWORD`
+  na Vercel para ter um usuário fixo que entra direto no `/admin`.
+
+Sem `DATABASE_URL`, o login continua no modo visual (localStorage) e nada
+disso é exigido — é o que mantém o site atual funcionando até o banco entrar.
+
+Para ligar: rode `db/schema.sql` no Neon, adicione `DATABASE_URL` (string do
+pooler) na Vercel e faça redeploy.
+
 ## Segurança — pontos conhecidos a resolver com o back-end
 
 - **Preço vem do cliente.** Hoje o valor da cobrança chega pela URL do

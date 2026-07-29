@@ -290,6 +290,64 @@ function IconBtn({
   );
 }
 
+function ResetSenha({ email }: { email: string }) {
+  const [nova, setNova] = useState("");
+  const [msg, setMsg] = useState<{ ok: boolean; texto: string } | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  async function enviar() {
+    if (nova.length < 6) {
+      setMsg({ ok: false, texto: "Mínimo de 6 caracteres." });
+      return;
+    }
+    setLoading(true);
+    setMsg(null);
+    try {
+      const res = await fetch("/api/admin/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, newPassword: nova }),
+      });
+      const data = await res.json().catch(() => ({}));
+      setMsg({ ok: Boolean(data.ok), texto: data.ok ? "Senha redefinida." : data.message ?? "Falhou." });
+      if (data.ok) setNova("");
+    } catch {
+      setMsg({ ok: false, texto: "Falha de conexão." });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="mt-4 rounded-xl border border-zen-border bg-zen-bg p-3.5">
+      <p className="text-[11px] font-bold uppercase tracking-wider text-zen-muted">
+        Redefinir senha do vendedor
+      </p>
+      <div className="mt-2 flex gap-2">
+        <input
+          type="text"
+          value={nova}
+          onChange={(e) => setNova(e.target.value)}
+          placeholder="nova senha (6+)"
+          className="flex-1 rounded-lg border border-zen-border bg-zen-card px-3 py-2 text-[12.5px] outline-none transition placeholder:text-zinc-600 focus:border-zen-red/60"
+        />
+        <button
+          onClick={enviar}
+          disabled={loading}
+          className="rounded-lg bg-gradient-to-r from-zen-red to-zen-red-dark px-4 text-[12.5px] font-bold text-white shadow-red-soft transition hover:brightness-110 disabled:opacity-60"
+        >
+          {loading ? "…" : "Redefinir"}
+        </button>
+      </div>
+      {msg && (
+        <p className={`mt-2 text-[11.5px] font-medium ${msg.ok ? "text-emerald-400" : "text-zen-red-bright"}`}>
+          {msg.texto}
+        </p>
+      )}
+    </div>
+  );
+}
+
 function AccountDetail({
   account,
   onClose,
@@ -389,6 +447,8 @@ function AccountDetail({
               {account.status === "banido" ? "Desbanir" : "Banir conta"}
             </button>
           </div>
+
+          <ResetSenha email={account.email} />
         </div>
       </div>
     </div>

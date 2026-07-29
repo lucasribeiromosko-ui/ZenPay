@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { ADMIN_COOKIE, adminConfigured, credentialsOk, makeToken } from "@/lib/adminAuth";
+import { ADMIN_COOKIE, anyAdminConfigured, credentialsOk, makeToken } from "@/lib/adminAuth";
 
 export async function POST(req: Request) {
-  if (!adminConfigured()) {
+  if (!anyAdminConfigured()) {
     return NextResponse.json(
       { ok: false, message: "Admin não configurado. Defina ADMIN_PASSWORD na Vercel." },
       { status: 503 }

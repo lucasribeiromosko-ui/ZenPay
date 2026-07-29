@@ -5,24 +5,28 @@ import { IconZen, IconMail, IconLock, IconEye, IconEyeOff } from "./icons";
 
 type LoginModalProps = {
   onLogin: (email: string) => void;
+  /** Quando true, autentica de verdade pela API (banco). */
+  useApi?: boolean;
 };
 
-export default function LoginModal({ onLogin }: LoginModalProps) {
+export default function LoginModal({ onLogin, useApi }: LoginModalProps) {
   const [tab, setTab] = useState<"login" | "register">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!email.trim() || !email.includes("@")) {
       setError("Informe um e-mail válido.");
       return;
     }
-    if (password.length < 4) {
-      setError("A senha precisa ter pelo menos 4 caracteres.");
+    const minSenha = useApi ? 6 : 4;
+    if (password.length < minSenha) {
+      setError(`A senha precisa ter pelo menos ${minSenha} caracteres.`);
       return;
     }
     if (tab === "register" && !name.trim()) {
@@ -30,7 +34,37 @@ export default function LoginModal({ onLogin }: LoginModalProps) {
       return;
     }
     setError(null);
-    onLogin(tab === "register" ? name.trim() : email.trim());
+
+    // Sem banco: comportamento antigo (visual).
+    if (!useApi) {
+      onLogin(tab === "register" ? name.trim() : email.trim());
+      return;
+    }
+
+    // Com banco: autenticação real.
+    setLoading(true);
+    try {
+      const url = tab === "register" ? "/api/auth/register" : "/api/auth/login";
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: email.trim(),
+          password,
+          nome: name.trim(),
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (data.ok) {
+        onLogin(data.user?.email ?? email.trim());
+      } else {
+        setError(data.message ?? "Não foi possível entrar.");
+      }
+    } catch {
+      setError("Falha de conexão.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -140,9 +174,10 @@ export default function LoginModal({ onLogin }: LoginModalProps) {
 
             <button
               type="submit"
-              className="mt-1 w-full rounded-xl bg-gradient-to-r from-zen-red to-zen-red-dark py-2.5 text-sm font-bold text-white shadow-red-soft transition hover:brightness-110 active:scale-[0.99]"
+              disabled={loading}
+              className="mt-1 w-full rounded-xl bg-gradient-to-r from-zen-red to-zen-red-dark py-2.5 text-sm font-bold text-white shadow-red-soft transition hover:brightness-110 active:scale-[0.99] disabled:opacity-60"
             >
-              {tab === "login" ? "Entrar no painel" : "Criar minha conta"}
+              {loading ? "Aguarde…" : tab === "login" ? "Entrar no painel" : "Criar minha conta"}
             </button>
           </form>
 

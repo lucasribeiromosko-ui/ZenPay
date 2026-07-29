@@ -48,18 +48,47 @@ export default function Dashboard() {
     setActive("Produtos & Checkouts");
   }
 
+  // dbAuth = autenticação real (Neon) ligada. Sem ela, usa localStorage.
+  const [dbAuth, setDbAuth] = useState(false);
+
   useEffect(() => {
-    setUser(localStorage.getItem(STORAGE_KEY));
-    setReady(true);
+    let cancel = false;
+    fetch("/api/auth/session", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((s: { configured: boolean; user: { email: string } | null }) => {
+        if (cancel) return;
+        if (s.configured) {
+          setDbAuth(true);
+          setUser(s.user ? s.user.email : null);
+        } else {
+          setDbAuth(false);
+          setUser(localStorage.getItem(STORAGE_KEY));
+        }
+        setReady(true);
+      })
+      .catch(() => {
+        if (cancel) return;
+        setDbAuth(false);
+        setUser(localStorage.getItem(STORAGE_KEY));
+        setReady(true);
+      });
+    return () => {
+      cancel = true;
+    };
   }, []);
 
   function handleLogin(identity: string) {
-    localStorage.setItem(STORAGE_KEY, identity);
+    // Com banco, a sessão já foi criada pela API (cookie). Sem banco, guarda local.
+    if (!dbAuth) localStorage.setItem(STORAGE_KEY, identity);
     setUser(identity);
   }
 
-  function handleLogout() {
-    localStorage.removeItem(STORAGE_KEY);
+  async function handleLogout() {
+    if (dbAuth) {
+      await fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
+    } else {
+      localStorage.removeItem(STORAGE_KEY);
+    }
     setUser(null);
   }
 
@@ -183,7 +212,7 @@ export default function Dashboard() {
         <ProductModal onClose={() => setProductModal(false)} onCreate={handleCreateProduct} />
       )}
 
-      {locked && <LoginModal onLogin={handleLogin} />}
+      {locked && <LoginModal onLogin={handleLogin} useApi={dbAuth} />}
     </div>
   );
 }
