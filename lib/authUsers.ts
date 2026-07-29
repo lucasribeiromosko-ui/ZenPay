@@ -55,7 +55,17 @@ export function readSession(token?: string): string | null {
 
 // ---- Contas ----
 
-export type DbUser = { id: string; nome: string; email: string; senha_hash: string };
+export type AccountStatus = "ativo" | "travado" | "banido";
+
+export type DbUser = {
+  id: string;
+  nome: string;
+  email: string;
+  senha_hash: string;
+  status: AccountStatus;
+  saldo_travado: boolean;
+  criado_em?: string;
+};
 
 // Cria a tabela de contas na primeira vez, para bastar configurar o
 // DATABASE_URL sem precisar rodar SQL manual. Idempotente.
@@ -70,10 +80,15 @@ export function ensureSchema(): Promise<void> {
         nome TEXT NOT NULL,
         email TEXT NOT NULL UNIQUE,
         senha_hash TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'ativo',
+        saldo_travado BOOLEAN NOT NULL DEFAULT false,
         criado_em TIMESTAMPTZ NOT NULL DEFAULT now(),
         atualizado_em TIMESTAMPTZ NOT NULL DEFAULT now()
       )
     `;
+    // Para tabelas antigas que já existiam sem estas colunas.
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'ativo'`;
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS saldo_travado BOOLEAN NOT NULL DEFAULT false`;
   })().catch((e) => {
     schemaReady = null; // permite tentar de novo no próximo request
     throw e;
@@ -85,9 +100,42 @@ export async function getUser(email: string): Promise<DbUser | null> {
   await ensureSchema();
   const sql = getSql();
   const rows = (await sql`
-    SELECT id, nome, email, senha_hash FROM users WHERE email = ${email.toLowerCase()}
+    SELECT id, nome, email, senha_hash, status, saldo_travado
+    FROM users WHERE email = ${email.toLowerCase()}
   `) as DbUser[];
   return rows[0] ?? null;
+}
+
+export async function listUsers() {
+  await ensureSchema();
+  const sql = getSql();
+  return (await sql`
+    SELECT id, nome, email, status, saldo_travado, criado_em
+    FROM users ORDER BY criado_em DESC
+  `) as {
+    id: string;
+    nome: string;
+    email: string;
+    status: AccountStatus;
+    saldo_travado: boolean;
+    criado_em: string;
+  }[];
+}
+
+export async function setAccountStatus(email: string, status: AccountStatus, saldoTravado?: boolean) {
+  await ensureSchema();
+  const sql = getSql();
+  if (saldoTravado === undefined) {
+    await sql`UPDATE users SET status = ${status}, atualizado_em = now() WHERE email = ${email.toLowerCase()}`;
+  } else {
+    await sql`UPDATE users SET status = ${status}, saldo_travado = ${saldoTravado}, atualizado_em = now() WHERE email = ${email.toLowerCase()}`;
+  }
+}
+
+export async function setSaldoTravado(email: string, travado: boolean) {
+  await ensureSchema();
+  const sql = getSql();
+  await sql`UPDATE users SET saldo_travado = ${travado}, atualizado_em = now() WHERE email = ${email.toLowerCase()}`;
 }
 
 export async function createUser(nome: string, email: string, password: string) {

@@ -26,6 +26,12 @@ export async function POST(req: Request) {
     if (!user || !(await verifyPassword(password, user.senha_hash))) {
       return NextResponse.json({ ok: false, message: "E-mail ou senha incorretos." }, { status: 401 });
     }
+    if (user.status === "banido") {
+      return NextResponse.json({ ok: false, message: "Conta banida. Fale com o suporte." }, { status: 403 });
+    }
+    if (user.status === "travado") {
+      return NextResponse.json({ ok: false, message: "Conta bloqueada. Fale com o suporte." }, { status: 403 });
+    }
     const res = NextResponse.json({ ok: true, user: { email: user.email, nome: user.nome } });
     res.cookies.set(SESSION_COOKIE, makeSession(email), {
       httpOnly: true,

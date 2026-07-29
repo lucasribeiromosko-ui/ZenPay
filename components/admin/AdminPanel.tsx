@@ -33,35 +33,72 @@ const statusLabel: Record<AccountStatus, string> = {
 
 export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [configured, setConfigured] = useState<boolean | null>(null);
   const [busca, setBusca] = useState("");
   const [filtro, setFiltro] = useState<"todos" | AccountStatus>("todos");
   const [detalhe, setDetalhe] = useState<Account | null>(null);
 
-  useEffect(() => {
+  async function refetch() {
+    try {
+      const res = await fetch("/api/admin/accounts", { cache: "no-store" });
+      const d = await res.json().catch(() => ({}));
+      if (d.configured) {
+        setConfigured(true);
+        setAccounts(d.accounts as Account[]);
+        setDetalhe((prev) =>
+          prev ? (d.accounts as Account[]).find((a) => a.email === prev.email) ?? null : null
+        );
+        return;
+      }
+    } catch {
+      // cai no modo demo
+    }
+    setConfigured(false);
     setAccounts(loadAccounts());
+  }
+
+  useEffect(() => {
+    refetch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  function mutate(id: string, fn: (a: Account) => Account) {
+  // Modo demo (localStorage) — só quando não há banco.
+  function mutateLocal(id: string, fn: (a: Account) => Account) {
     setAccounts((prev) => {
       const next = prev.map((a) => (a.id === id ? fn(a) : a));
       saveAccounts(next);
-      // mantém o modal em sincronia
       setDetalhe((d) => (d && d.id === id ? next.find((a) => a.id === id) ?? null : d));
       return next;
     });
   }
 
+  async function applyAction(a: Account, action: string, localFn: (x: Account) => Account) {
+    if (configured) {
+      await fetch("/api/admin/account-action", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: a.email, action }),
+      }).catch(() => {});
+      await refetch();
+    } else {
+      mutateLocal(a.id, localFn);
+    }
+  }
+
   const toggleTravaConta = (a: Account) =>
-    mutate(a.id, (x) => ({
+    applyAction(a, a.status === "travado" ? "unlock" : "lock", (x) => ({
       ...x,
       status: x.status === "travado" ? "ativo" : "travado",
     }));
 
   const toggleTravaSaldo = (a: Account) =>
-    mutate(a.id, (x) => ({ ...x, saldoTravado: !x.saldoTravado }));
+    applyAction(a, a.saldoTravado ? "unfreeze" : "freeze", (x) => ({
+      ...x,
+      saldoTravado: !x.saldoTravado,
+    }));
 
   const toggleBanir = (a: Account) =>
-    mutate(a.id, (x) =>
+    applyAction(a, a.status === "banido" ? "unban" : "ban", (x) =>
       x.status === "banido"
         ? { ...x, status: "ativo", saldoTravado: false }
         : { ...x, status: "banido", saldoTravado: true }
@@ -112,12 +149,14 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
       </header>
 
       <main className="mx-auto max-w-[1200px] space-y-6 px-4 py-6 lg:px-8">
-        {/* Aviso de dados de demonstração */}
-        <div className="rounded-xl border border-amber-500/25 bg-amber-500/5 px-4 py-3 text-[12.5px] leading-relaxed text-amber-200/90">
-          As contas abaixo são de <span className="font-bold">demonstração</span> enquanto o banco de
-          dados não está ligado. As ações funcionam sobre esses dados e passarão a agir sobre as
-          contas reais quando o back-end for conectado.
-        </div>
+        {/* Aviso de dados de demonstração — só sem banco */}
+        {configured === false && (
+          <div className="rounded-xl border border-amber-500/25 bg-amber-500/5 px-4 py-3 text-[12.5px] leading-relaxed text-amber-200/90">
+            As contas abaixo são de <span className="font-bold">demonstração</span> enquanto o banco de
+            dados não está ligado. As ações funcionam sobre esses dados e passarão a agir sobre as
+            contas reais quando o back-end for conectado.
+          </div>
+        )}
 
         {/* Stats */}
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -225,7 +264,11 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
             </table>
           </div>
           {filtradas.length === 0 && (
-            <p className="py-10 text-center text-[13px] text-zen-muted">Nenhuma conta encontrada.</p>
+            <p className="py-10 text-center text-[13px] text-zen-muted">
+              {configured && accounts.length === 0
+                ? "Nenhuma conta criada ainda. Quando um vendedor se cadastrar, aparece aqui."
+                : "Nenhuma conta encontrada."}
+            </p>
           )}
         </section>
       </main>
