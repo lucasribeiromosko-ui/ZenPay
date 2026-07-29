@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { IconZen, IconMail, IconLock, IconEye, IconEyeOff } from "./icons";
+import { IconMail, IconLock, IconEye, IconEyeOff } from "./icons";
+import { LogoFull } from "./Logo";
 
 type LoginModalProps = {
   onLogin: (email: string) => void;
@@ -79,19 +80,12 @@ export default function LoginModal({ onLogin, useApi }: LoginModalProps) {
         <div className="relative px-7 pb-7 pt-8">
           {/* Logo */}
           <div className="mb-5 flex flex-col items-center gap-3">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-zen-red to-zen-blood text-white shadow-red-soft">
-              <IconZen className="h-7 w-7" />
-            </div>
-            <div className="text-center">
-              <h1 className="text-xl font-extrabold tracking-wide">
-                ZEN<span className="text-zen-red-bright">PAY</span>
-              </h1>
-              <p className="mt-1 text-[13px] text-zen-muted">
-                {tab === "login"
-                  ? "Faça login para acessar seu painel"
-                  : "Crie sua conta e comece a vender"}
-              </p>
-            </div>
+            <LogoFull className="h-16 w-auto rounded-xl object-contain shadow-red-soft" />
+            <p className="text-center text-[13px] text-zen-muted">
+              {tab === "login"
+                ? "Faça login para acessar seu painel"
+                : "Crie sua conta e comece a vender"}
+            </p>
           </div>
 
           {/* Tabs */}

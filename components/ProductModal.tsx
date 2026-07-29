@@ -8,7 +8,7 @@ import {
   centsFromInput,
   newProductId,
 } from "@/lib/products";
-import { IconClose, IconBox, IconPix, IconCard, IconUsers, IconZen, IconLock } from "./icons";
+import { IconClose, IconBox, IconPix, IconCard, IconUsers, IconLock } from "./icons";
 
 function MethodToggle({
   checked,
@@ -183,7 +183,7 @@ export default function ProductModal({
                 }`}
               >
                 <span className="flex items-center gap-1.5 text-[13px] font-bold">
-                  <IconZen className="h-3.5 w-3.5" />
+                  <IconPix className="h-3.5 w-3.5" />
                   Rápido
                 </span>
                 <span className="mt-0.5 block text-[11px] leading-snug text-zen-muted">

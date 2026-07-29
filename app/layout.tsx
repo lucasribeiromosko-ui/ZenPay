@@ -4,6 +4,10 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "ZenPay — Painel",
   description: "ZenPay — Sua gateway de pagamentos. Rápida, segura e zen.",
+  icons: {
+    icon: "/favicon.png",
+    apple: "/zenpay-icon.png",
+  },
 };
 
 export default function RootLayout({

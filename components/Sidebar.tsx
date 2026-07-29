@@ -17,8 +17,8 @@ import {
   IconLock,
   IconClose,
   IconShieldAlt,
-  IconZen,
 } from "./icons";
+import { LogoMark } from "./Logo";
 
 type NavItem = {
   label: string;
@@ -107,9 +107,7 @@ export default function Sidebar({
       >
       {/* Logo */}
       <div className="flex items-center gap-2.5 px-5 pb-2 pt-5">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-zen-red to-zen-blood text-white shadow-red-soft">
-          <IconZen className="h-5 w-5" />
-        </div>
+        <LogoMark className="h-9 w-9 rounded-xl object-cover shadow-red-soft" />
         <span className="text-lg font-extrabold tracking-wide">
           ZEN<span className="text-zen-red-bright">PAY</span>
         </span>

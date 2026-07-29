@@ -6,6 +6,7 @@ import FakeQr from "./FakeQr";
 import MercadoPagoCard from "./MercadoPagoCard";
 import MercadoPagoPix from "./MercadoPagoPix";
 import { evaluateSandboxCard, TEST_CARDS } from "@/lib/sandbox";
+import { LogoMark } from "../Logo";
 
 type MpConfig = {
   pixReal: boolean;
@@ -14,7 +15,6 @@ type MpConfig = {
   testMode: boolean;
 };
 import {
-  IconZen,
   IconPix,
   IconCard,
   IconCopy,
@@ -227,9 +227,7 @@ export default function Checkout({ linkId }: { linkId: string }) {
       <header className="border-b border-zen-border bg-zen-surface/80 backdrop-blur-md">
         <div className="mx-auto flex h-14 max-w-[960px] items-center justify-between px-4">
           <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-zen-red to-zen-blood text-white">
-              <IconZen className="h-4 w-4" />
-            </div>
+            <LogoMark className="h-8 w-8 rounded-lg object-cover" />
             <span className="font-extrabold tracking-wide">
               ZEN<span className="text-zen-red-bright">PAY</span>
             </span>

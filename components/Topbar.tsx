@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { IconUser, IconLogout, IconZen, IconMenu } from "./icons";
+import { IconUser, IconLogout, IconMenu } from "./icons";
+import { LogoMark } from "./Logo";
 
 type TopbarProps = {
   userName: string | null;
@@ -23,9 +24,7 @@ export default function Topbar({ userName, onLogout, onOpenMenu }: TopbarProps) 
         >
           <IconMenu className="h-4.5 w-4.5" />
         </button>
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-zen-red to-zen-blood text-white">
-          <IconZen className="h-4 w-4" />
-        </div>
+        <LogoMark className="h-8 w-8 rounded-lg object-cover" />
         <span className="font-extrabold tracking-wide">
           ZEN<span className="text-zen-red-bright">PAY</span>
         </span>

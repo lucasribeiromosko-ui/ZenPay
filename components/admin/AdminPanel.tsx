@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import { Account, AccountStatus, loadAccounts, saveAccounts } from "@/lib/adminData";
 import { brlFromCents } from "@/lib/products";
 import {
-  IconShieldAlt,
   IconLogout,
   IconUsers,
   IconWallet,
@@ -18,6 +17,7 @@ import {
   IconClose,
   IconCheck,
 } from "../icons";
+import { LogoMark } from "../Logo";
 
 const statusBadge: Record<AccountStatus, string> = {
   ativo: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30",
@@ -129,9 +129,7 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
       {/* Topbar */}
       <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-zen-border bg-zen-bg/80 px-4 backdrop-blur-md lg:px-8">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-zen-red to-zen-blood text-white">
-            <IconShieldAlt className="h-5 w-5" />
-          </div>
+          <LogoMark className="h-9 w-9 rounded-xl object-cover" />
           <span className="text-lg font-extrabold tracking-wide">
             ZEN<span className="text-zen-red-bright">PAY</span>
             <span className="ml-1.5 rounded bg-zen-red/15 px-1.5 py-0.5 text-[10px] font-bold tracking-widest text-zen-red-bright">

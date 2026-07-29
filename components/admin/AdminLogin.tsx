@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { IconShieldAlt, IconMail, IconLock, IconEye, IconEyeOff } from "../icons";
+import { IconMail, IconLock, IconEye, IconEyeOff } from "../icons";
+import { LogoMark } from "../Logo";
 
 export default function AdminLogin({ onSuccess }: { onSuccess: () => void }) {
   const [email, setEmail] = useState("");
@@ -39,9 +40,7 @@ export default function AdminLogin({ onSuccess }: { onSuccess: () => void }) {
         <div className="pointer-events-none absolute -top-24 left-1/2 h-48 w-72 -translate-x-1/2 rounded-full bg-zen-red/25 blur-3xl" />
         <div className="relative">
           <div className="mb-5 flex flex-col items-center gap-3">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-zen-red to-zen-blood text-white shadow-red-soft">
-              <IconShieldAlt className="h-7 w-7" />
-            </div>
+            <LogoMark className="h-14 w-14 rounded-2xl object-cover shadow-red-soft" />
             <div className="text-center">
               <h1 className="text-xl font-extrabold tracking-wide">
                 ZEN<span className="text-zen-red-bright">PAY</span>{" "}
