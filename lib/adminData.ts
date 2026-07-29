@@ -1,9 +1,9 @@
-// Dados da área de admin.
+// Dados da área de admin — FALLBACK de demonstração.
 //
-// Enquanto o banco (Neon) não está ligado, as contas aqui são de
-// DEMONSTRAÇÃO e ficam no localStorage. As ações (travar, travar saldo,
-// banir) funcionam sobre esses dados. Quando o back-end entrar, este
-// arquivo passa a ler/gravar as contas reais via API.
+// Quando o banco (Neon) está ligado, o painel lê as contas reais via
+// /api/admin/accounts e NÃO usa este arquivo. Este seed só aparece quando
+// não há banco configurado, para não deixar o painel vazio em ambiente de
+// desenvolvimento.
 
 export type AccountStatus = "ativo" | "travado" | "banido";
 

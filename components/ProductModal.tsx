@@ -8,7 +8,8 @@ import {
   centsFromInput,
   newProductId,
 } from "@/lib/products";
-import { IconClose, IconBox, IconPix, IconCard, IconUsers, IconLock } from "./icons";
+import { IconClose, IconBox, IconPix, IconCard, IconUsers, IconLock, IconCheck } from "./icons";
+import { useMpMode } from "./useMpMode";
 
 function MethodToggle({
   checked,
@@ -73,6 +74,7 @@ export default function ProductModal({
   const [debito, setDebito] = useState(false);
   const [parcelas, setParcelas] = useState(12);
   const [error, setError] = useState<string | null>(null);
+  const mpMode = useMpMode();
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -237,13 +239,19 @@ export default function ProductModal({
                 icon={<IconCard className="h-4 w-4" />}
               />
             </div>
-            {(credito || debito) && (
-              <p className="mt-2 flex items-start gap-1.5 rounded-lg border border-amber-500/25 bg-amber-500/5 px-2.5 py-1.5 text-[11px] leading-snug text-amber-300/90">
-                <IconLock className="mt-0.5 h-3 w-3 shrink-0" />
-                Cartão está em modo sandbox (teste): só cartões de teste passam e
-                nenhum dado de cartão é guardado.
-              </p>
-            )}
+            {(credito || debito) &&
+              (mpMode?.testMode === false ? (
+                <p className="mt-2 flex items-start gap-1.5 rounded-lg border border-emerald-500/25 bg-emerald-500/5 px-2.5 py-1.5 text-[11px] leading-snug text-emerald-300/90">
+                  <IconCheck className="mt-0.5 h-3 w-3 shrink-0" />
+                  Cartão via Mercado Pago — cobrança real. Nenhum dado de cartão é guardado aqui.
+                </p>
+              ) : (
+                <p className="mt-2 flex items-start gap-1.5 rounded-lg border border-amber-500/25 bg-amber-500/5 px-2.5 py-1.5 text-[11px] leading-snug text-amber-300/90">
+                  <IconLock className="mt-0.5 h-3 w-3 shrink-0" />
+                  Cartão em modo teste: só cartões de teste passam e nenhum dado de cartão é
+                  guardado.
+                </p>
+              ))}
           </div>
 
           {credito && (
