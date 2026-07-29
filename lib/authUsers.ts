@@ -57,7 +57,32 @@ export function readSession(token?: string): string | null {
 
 export type DbUser = { id: string; nome: string; email: string; senha_hash: string };
 
+// Cria a tabela de contas na primeira vez, para bastar configurar o
+// DATABASE_URL sem precisar rodar SQL manual. Idempotente.
+let schemaReady: Promise<void> | null = null;
+export function ensureSchema(): Promise<void> {
+  if (schemaReady) return schemaReady;
+  const sql = getSql();
+  schemaReady = (async () => {
+    await sql`
+      CREATE TABLE IF NOT EXISTS users (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        nome TEXT NOT NULL,
+        email TEXT NOT NULL UNIQUE,
+        senha_hash TEXT NOT NULL,
+        criado_em TIMESTAMPTZ NOT NULL DEFAULT now(),
+        atualizado_em TIMESTAMPTZ NOT NULL DEFAULT now()
+      )
+    `;
+  })().catch((e) => {
+    schemaReady = null; // permite tentar de novo no próximo request
+    throw e;
+  });
+  return schemaReady;
+}
+
 export async function getUser(email: string): Promise<DbUser | null> {
+  await ensureSchema();
   const sql = getSql();
   const rows = (await sql`
     SELECT id, nome, email, senha_hash FROM users WHERE email = ${email.toLowerCase()}
@@ -66,6 +91,7 @@ export async function getUser(email: string): Promise<DbUser | null> {
 }
 
 export async function createUser(nome: string, email: string, password: string) {
+  await ensureSchema();
   const sql = getSql();
   const senha_hash = await hashPassword(password);
   const rows = (await sql`
@@ -77,6 +103,7 @@ export async function createUser(nome: string, email: string, password: string) 
 }
 
 export async function setPassword(email: string, password: string): Promise<boolean> {
+  await ensureSchema();
   const sql = getSql();
   const senha_hash = await hashPassword(password);
   const rows = (await sql`
