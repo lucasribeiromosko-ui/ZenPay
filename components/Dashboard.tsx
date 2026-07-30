@@ -20,6 +20,8 @@ import ProductModal from "./ProductModal";
 import { Product, loadProducts, saveProducts } from "@/lib/products";
 import { isAdminEmail } from "@/lib/adminEmails";
 import { ReceivingPage, NotificationsPage } from "./pages/SettingsPages";
+import TrackingPage from "./pages/TrackingPage";
+import ApiWebhooksPage from "./pages/ApiWebhooksPage";
 import LockedPage from "./pages/LockedPage";
 import {
   IconTrendUp,
@@ -32,7 +34,7 @@ import {
 const STORAGE_KEY = "zenpay_user";
 
 /** Recursos ainda não disponíveis — aparecem com cadeado no menu. */
-const LOCKED = ["Saque em Cripto", "Trackeamento", "API & Webhooks"];
+const LOCKED = ["Saque em Cripto"];
 
 export default function Dashboard() {
   const [user, setUser] = useState<string | null>(null);
@@ -132,6 +134,10 @@ export default function Dashboard() {
             <ReceivingPage />
           ) : active === "Notificações" ? (
             <NotificationsPage />
+          ) : active === "Trackeamento" ? (
+            <TrackingPage />
+          ) : active === "API & Webhooks" ? (
+            <ApiWebhooksPage />
           ) : LOCKED.includes(active) ? (
             <LockedPage titulo={active} />
           ) : active === "Temas" ? (

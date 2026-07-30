@@ -54,8 +54,8 @@ const sections: NavSection[] = [
   {
     title: "Integrações",
     items: [
-      { label: "Trackeamento", icon: <IconGlobe />, locked: true },
-      { label: "API & Webhooks", icon: <IconApi />, locked: true },
+      { label: "Trackeamento", icon: <IconGlobe /> },
+      { label: "API & Webhooks", icon: <IconApi /> },
     ],
   },
   {
