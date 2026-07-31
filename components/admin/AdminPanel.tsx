@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Account, AccountStatus, loadAccounts, saveAccounts } from "@/lib/adminData";
 import { brlFromCents } from "@/lib/products";
+import { PLAN_ORDER, PLAN_INFO, Plan } from "@/lib/plans";
 import {
   IconLogout,
   IconUsers,
@@ -103,6 +104,21 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
         ? { ...x, status: "ativo", saldoTravado: false }
         : { ...x, status: "banido", saldoTravado: true }
     );
+
+  const setPlano = (a: Account, plano: Plan) =>
+    applyAction(a, `plan:${plano}`, (x) => ({ ...x, plano }));
+
+  const addMed = (a: Account) =>
+    applyAction(a, "med-add", (x) => {
+      const tol = x.plano === "black" ? Infinity : x.plano === "white" ? 3 : 1;
+      const meds = x.meds + 1;
+      const caiu = meds >= tol;
+      return caiu
+        ? { ...x, meds, status: "travado", saldoTravado: true }
+        : { ...x, meds };
+    });
+
+  const resetMed = (a: Account) => applyAction(a, "med-reset", (x) => ({ ...x, meds: 0 }));
 
   const filtradas = useMemo(() => {
     const q = busca.trim().toLowerCase();
@@ -222,6 +238,17 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
                           <IconSnow className="h-2.5 w-2.5" /> saldo
                         </span>
                       )}
+                      <span
+                        className={`ml-1 inline-block rounded-full border px-2 py-1 text-[10px] font-bold uppercase ${
+                          a.plano === "black"
+                            ? "border-zen-red/40 bg-zen-red/10 text-zen-red-bright"
+                            : a.plano === "white"
+                              ? "border-zinc-400/40 bg-white/10 text-zinc-100"
+                              : "border-zinc-600/40 bg-zinc-700/20 text-zinc-400"
+                        }`}
+                      >
+                        {PLAN_INFO[a.plano].nome}
+                      </span>
                     </td>
                     <td className="px-3 py-3.5 font-bold">{brlFromCents(a.saldoDisponivel)}</td>
                     <td className="px-3 py-3.5 text-zinc-300">{brlFromCents(a.volumeTotal)}</td>
@@ -278,6 +305,9 @@ export default function AdminPanel({ onLogout }: { onLogout: () => void }) {
           onTravaConta={() => toggleTravaConta(detalhe)}
           onTravaSaldo={() => toggleTravaSaldo(detalhe)}
           onBanir={() => toggleBanir(detalhe)}
+          onSetPlano={(p) => setPlano(detalhe, p)}
+          onAddMed={() => addMed(detalhe)}
+          onResetMed={() => resetMed(detalhe)}
         />
       )}
     </div>
@@ -395,12 +425,18 @@ function AccountDetail({
   onTravaConta,
   onTravaSaldo,
   onBanir,
+  onSetPlano,
+  onAddMed,
+  onResetMed,
 }: {
   account: Account;
   onClose: () => void;
   onTravaConta: () => void;
   onTravaSaldo: () => void;
   onBanir: () => void;
+  onSetPlano: (p: Plan) => void;
+  onAddMed: () => void;
+  onResetMed: () => void;
 }) {
   const info: [string, string][] = [
     ["Documento", account.documento],
@@ -487,6 +523,57 @@ function AccountDetail({
               <IconBan className="h-4 w-4" />
               {account.status === "banido" ? "Desbanir" : "Banir conta"}
             </button>
+          </div>
+
+          {/* Plano */}
+          <div className="mt-5">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-zen-muted">Plano</p>
+            <div className="mt-1.5 grid grid-cols-3 gap-2">
+              {PLAN_ORDER.map((p) => (
+                <button
+                  key={p}
+                  onClick={() => onSetPlano(p)}
+                  className={`rounded-xl border py-2.5 text-[13px] font-bold transition ${
+                    account.plano === p
+                      ? "border-zen-red/60 bg-zen-red/15 text-zen-red-bright"
+                      : "border-zen-border bg-zen-bg text-zinc-300 hover:border-zen-red/40"
+                  }`}
+                >
+                  {PLAN_INFO[p].nome}
+                </button>
+              ))}
+            </div>
+            <p className="mt-1.5 text-[11.5px] text-zen-muted">
+              {PLAN_INFO[account.plano].resumo}
+            </p>
+          </div>
+
+          {/* MED */}
+          <div className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-zen-border bg-zen-bg p-3.5">
+            <div>
+              <p className="text-[12.5px] font-semibold">MEDs registrados: {account.meds}</p>
+              <p className="text-[11.5px] text-zen-muted">
+                {account.plano === "black"
+                  ? "Black não cai por MED."
+                  : `Cai ao atingir ${PLAN_INFO[account.plano].medTolerancia} MED${
+                      PLAN_INFO[account.plano].medTolerancia > 1 ? "s" : ""
+                    }.`}
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={onResetMed}
+                className="rounded-lg border border-zen-border bg-zen-card px-3 py-2 text-[12px] font-semibold text-zinc-300 transition hover:text-white"
+              >
+                Zerar
+              </button>
+              <button
+                onClick={onAddMed}
+                className="rounded-lg border border-zen-red/40 bg-zen-red/10 px-3 py-2 text-[12px] font-bold text-zen-red-bright transition hover:bg-zen-red/20"
+              >
+                + Registrar MED
+              </button>
+            </div>
           </div>
 
           <ResetSenha email={account.email} />

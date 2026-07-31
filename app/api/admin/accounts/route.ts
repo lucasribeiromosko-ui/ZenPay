@@ -29,6 +29,8 @@ export async function GET() {
       criadoEm: u.criado_em ? new Date(u.criado_em).toLocaleDateString("pt-BR") : "—",
       ultimoAcesso: "—",
       status: u.status,
+      plano: u.plano ?? "free",
+      meds: u.meds ?? 0,
       saldoTravado: u.saldo_travado,
       saldoDisponivel: 0,
       saldoALiberar: 0,

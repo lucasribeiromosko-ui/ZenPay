@@ -22,6 +22,7 @@ import { isAdminEmail } from "@/lib/adminEmails";
 import { ReceivingPage, NotificationsPage } from "./pages/SettingsPages";
 import TrackingPage from "./pages/TrackingPage";
 import ApiWebhooksPage from "./pages/ApiWebhooksPage";
+import PlansPage from "./pages/PlansPage";
 import LockedPage from "./pages/LockedPage";
 import {
   IconTrendUp,
@@ -138,6 +139,8 @@ export default function Dashboard() {
             <TrackingPage />
           ) : active === "API & Webhooks" ? (
             <ApiWebhooksPage />
+          ) : active === "Planos" ? (
+            <PlansPage />
           ) : LOCKED.includes(active) ? (
             <LockedPage titulo={active} />
           ) : active === "Temas" ? (

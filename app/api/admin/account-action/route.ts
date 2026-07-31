@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { ADMIN_COOKIE, tokenValid } from "@/lib/adminAuth";
 import { dbConfigured } from "@/lib/db";
-import { setAccountStatus, setSaldoTravado } from "@/lib/authUsers";
+import { setAccountStatus, setSaldoTravado, setPlano, registrarMed, resetMeds } from "@/lib/authUsers";
+import { isPlan } from "@/lib/plans";
 
 // Ações do admin sobre uma conta real: travar, destravar, travar/liberar
 // saldo, banir, desbanir.
@@ -49,7 +50,22 @@ export async function POST(req: Request) {
       case "unban":
         await setAccountStatus(email, "ativo", false);
         break;
+      case "med-add": {
+        const r = await registrarMed(email);
+        return NextResponse.json({ ok: true, ...r });
+      }
+      case "med-reset":
+        await resetMeds(email);
+        break;
       default:
+        if (action.startsWith("plan:")) {
+          const plano = action.slice(5);
+          if (!isPlan(plano)) {
+            return NextResponse.json({ ok: false, message: "Plano inválido." }, { status: 400 });
+          }
+          await setPlano(email, plano);
+          break;
+        }
         return NextResponse.json({ ok: false, message: "Ação inválida." }, { status: 400 });
     }
     return NextResponse.json({ ok: true });

@@ -57,6 +57,8 @@ export function readSession(token?: string): string | null {
 
 export type AccountStatus = "ativo" | "travado" | "banido";
 
+export type Plan = "free" | "white" | "black";
+
 export type DbUser = {
   id: string;
   nome: string;
@@ -64,6 +66,8 @@ export type DbUser = {
   senha_hash: string;
   status: AccountStatus;
   saldo_travado: boolean;
+  plano: Plan;
+  meds: number;
   criado_em?: string;
 };
 
@@ -89,6 +93,8 @@ export function ensureSchema(): Promise<void> {
     // Para tabelas antigas que já existiam sem estas colunas.
     await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'ativo'`;
     await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS saldo_travado BOOLEAN NOT NULL DEFAULT false`;
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS plano TEXT NOT NULL DEFAULT 'free'`;
+    await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS meds INTEGER NOT NULL DEFAULT 0`;
   })().catch((e) => {
     schemaReady = null; // permite tentar de novo no próximo request
     throw e;
@@ -100,7 +106,7 @@ export async function getUser(email: string): Promise<DbUser | null> {
   await ensureSchema();
   const sql = getSql();
   const rows = (await sql`
-    SELECT id, nome, email, senha_hash, status, saldo_travado
+    SELECT id, nome, email, senha_hash, status, saldo_travado, plano, meds
     FROM users WHERE email = ${email.toLowerCase()}
   `) as DbUser[];
   return rows[0] ?? null;
@@ -110,7 +116,7 @@ export async function listUsers() {
   await ensureSchema();
   const sql = getSql();
   return (await sql`
-    SELECT id, nome, email, status, saldo_travado, criado_em
+    SELECT id, nome, email, status, saldo_travado, plano, meds, criado_em
     FROM users ORDER BY criado_em DESC
   `) as {
     id: string;
@@ -118,8 +124,51 @@ export async function listUsers() {
     email: string;
     status: AccountStatus;
     saldo_travado: boolean;
+    plano: Plan;
+    meds: number;
     criado_em: string;
   }[];
+}
+
+export async function setPlano(email: string, plano: Plan) {
+  await ensureSchema();
+  const sql = getSql();
+  await sql`UPDATE users SET plano = ${plano}, atualizado_em = now() WHERE email = ${email.toLowerCase()}`;
+}
+
+/**
+ * Registra um MED na conta. Conforme o plano, pode "derrubar" a conta
+ * (travar + travar saldo). Devolve o novo estado.
+ */
+export async function registrarMed(
+  email: string
+): Promise<{ meds: number; caiu: boolean }> {
+  await ensureSchema();
+  const sql = getSql();
+  const rows = (await sql`
+    UPDATE users SET meds = meds + 1, atualizado_em = now()
+    WHERE email = ${email.toLowerCase()}
+    RETURNING plano, meds
+  `) as { plano: Plan; meds: number }[];
+  const u = rows[0];
+  if (!u) return { meds: 0, caiu: false };
+
+  const tolerancia = u.plano === "black" ? Infinity : u.plano === "white" ? 3 : 1;
+  if (u.meds >= tolerancia) {
+    // Cai e perde o saldo: trava a conta e bloqueia o saldo.
+    await sql`
+      UPDATE users SET status = 'travado', saldo_travado = true, atualizado_em = now()
+      WHERE email = ${email.toLowerCase()}
+    `;
+    return { meds: u.meds, caiu: true };
+  }
+  return { meds: u.meds, caiu: false };
+}
+
+export async function resetMeds(email: string) {
+  await ensureSchema();
+  const sql = getSql();
+  await sql`UPDATE users SET meds = 0, atualizado_em = now() WHERE email = ${email.toLowerCase()}`;
 }
 
 export async function setAccountStatus(email: string, status: AccountStatus, saldoTravado?: boolean) {

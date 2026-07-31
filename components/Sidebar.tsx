@@ -62,6 +62,7 @@ const sections: NavSection[] = [
     title: "Configurações",
     items: [
       { label: "Recebimento", icon: <IconWallet /> },
+      { label: "Planos", icon: <IconShieldAlt /> },
       { label: "Saque em Cripto", icon: <IconBitcoin />, locked: true },
       { label: "Notificações", icon: <IconBell /> },
     ],

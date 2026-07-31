@@ -16,6 +16,8 @@ export type Account = {
   criadoEm: string;
   ultimoAcesso: string;
   status: AccountStatus;
+  plano: "free" | "white" | "black";
+  meds: number;
   /** Saldo bloqueado para saque, mesmo com a conta ativa. */
   saldoTravado: boolean;
   saldoDisponivel: number; // centavos
@@ -38,6 +40,8 @@ const SEED: Account[] = [
     criadoEm: "12/05/2026",
     ultimoAcesso: "há 2 horas",
     status: "ativo",
+    plano: "black",
+    meds: 0,
     saldoTravado: false,
     saldoDisponivel: 1284500,
     saldoALiberar: 342000,
@@ -55,6 +59,8 @@ const SEED: Account[] = [
     criadoEm: "03/06/2026",
     ultimoAcesso: "há 10 min",
     status: "ativo",
+    plano: "white",
+    meds: 1,
     saldoTravado: true,
     saldoDisponivel: 458000,
     saldoALiberar: 120000,
@@ -72,6 +78,8 @@ const SEED: Account[] = [
     criadoEm: "21/03/2026",
     ultimoAcesso: "há 1 dia",
     status: "ativo",
+    plano: "black",
+    meds: 0,
     saldoTravado: false,
     saldoDisponivel: 7650000,
     saldoALiberar: 1890000,
@@ -89,6 +97,8 @@ const SEED: Account[] = [
     criadoEm: "28/06/2026",
     ultimoAcesso: "há 3 dias",
     status: "travado",
+    plano: "free",
+    meds: 1,
     saldoTravado: true,
     saldoDisponivel: 92000,
     saldoALiberar: 0,
@@ -106,6 +116,8 @@ const SEED: Account[] = [
     criadoEm: "09/07/2026",
     ultimoAcesso: "há 6 dias",
     status: "banido",
+    plano: "free",
+    meds: 1,
     saldoTravado: true,
     saldoDisponivel: 0,
     saldoALiberar: 0,
@@ -123,6 +135,8 @@ const SEED: Account[] = [
     criadoEm: "18/07/2026",
     ultimoAcesso: "há 25 min",
     status: "ativo",
+    plano: "free",
+    meds: 0,
     saldoTravado: false,
     saldoDisponivel: 234500,
     saldoALiberar: 88000,
