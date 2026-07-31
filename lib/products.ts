@@ -49,7 +49,7 @@ export function newProductId(): string {
   );
 }
 
-export function checkoutPath(p: Product): string {
+export function checkoutPath(p: Product, sellerToken?: string | null): string {
   const params = new URLSearchParams({
     desc: p.nome,
     valor: String(p.valor),
@@ -59,5 +59,6 @@ export function checkoutPath(p: Product): string {
     parcelas: String(p.parcelas),
     modo: p.modo,
   });
+  if (sellerToken) params.set("t", sellerToken);
   return `/pay/${p.id}?${params.toString()}`;
 }

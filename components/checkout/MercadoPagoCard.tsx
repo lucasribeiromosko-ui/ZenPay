@@ -38,6 +38,7 @@ type Props = {
   description: string;
   payerEmail?: string;
   tipo: "credito" | "debito";
+  sellerToken?: string;
   onApproved: () => void;
 };
 
@@ -48,6 +49,7 @@ export default function MercadoPagoCard({
   description,
   payerEmail,
   tipo,
+  sellerToken,
   onApproved,
 }: Props) {
   const [status, setStatus] = useState<"loading" | "ready" | "processing" | "error">("loading");
@@ -106,6 +108,7 @@ export default function MercadoPagoCard({
                     docType: cardFormData.payer?.identification?.type,
                     docNumber: cardFormData.payer?.identification?.number,
                     description,
+                    sellerToken,
                   }),
                 });
                 const data = await res.json().catch(() => ({}));
@@ -140,7 +143,7 @@ export default function MercadoPagoCard({
         // brick já desmontado
       }
     };
-  }, [publicKey, amount, maxInstallments, description, payerEmail, tipo, onApproved]);
+  }, [publicKey, amount, maxInstallments, description, payerEmail, tipo, sellerToken, onApproved]);
 
   return (
     <div className="space-y-3">

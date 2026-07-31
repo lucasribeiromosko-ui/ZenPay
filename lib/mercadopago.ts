@@ -122,6 +122,7 @@ export type PixChargeInput = {
   description: string;
   payer: { email: string; firstName?: string; docType?: string; docNumber?: string };
   idempotencyKey: string;
+  externalReference?: string;
 };
 
 export type PixChargeResult = {
@@ -145,6 +146,7 @@ export async function chargePix(input: PixChargeInput): Promise<PixChargeResult>
     transaction_amount: Number(input.transactionAmount.toFixed(2)),
     description: input.description,
     payment_method_id: "pix",
+    ...(input.externalReference ? { external_reference: input.externalReference } : {}),
     payer: {
       email: input.payer.email,
       first_name: input.payer.firstName,

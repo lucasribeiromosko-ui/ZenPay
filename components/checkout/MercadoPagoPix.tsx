@@ -12,6 +12,7 @@ type Props = {
   defaultEmail?: string;
   defaultName?: string;
   testMode?: boolean;
+  sellerToken?: string;
   onApproved: () => void;
 };
 
@@ -23,6 +24,7 @@ export default function MercadoPagoPix({
   defaultEmail,
   defaultName,
   testMode,
+  sellerToken,
   onApproved,
 }: Props) {
   const [email, setEmail] = useState(defaultEmail ?? "");
@@ -44,7 +46,7 @@ export default function MercadoPagoPix({
       const res = await fetch("/api/pay/pix", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount, email, name: defaultName, description }),
+        body: JSON.stringify({ amount, email, name: defaultName, description, sellerToken }),
       });
       const data = await res.json().catch(() => ({}));
       if (data.ok && data.qrCode) {

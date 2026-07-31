@@ -15,6 +15,7 @@ import {
   IconLock,
 } from "../icons";
 import { useMpMode } from "../useMpMode";
+import { useSellerToken } from "../useSellerToken";
 
 type PayLink = {
   id: string;
@@ -38,7 +39,7 @@ function formatBRL(raw: string): string {
   });
 }
 
-function buildUrl(link: PayLink): string {
+function buildUrl(link: PayLink, sellerToken?: string | null): string {
   const params = new URLSearchParams({
     desc: link.descricao,
     valor: link.valor,
@@ -47,6 +48,7 @@ function buildUrl(link: PayLink): string {
     debito: link.debito ? "1" : "0",
     parcelas: String(link.parcelas),
   });
+  if (sellerToken) params.set("t", sellerToken);
   return `/pay/${link.id}?${params.toString()}`;
 }
 
@@ -110,6 +112,7 @@ export default function PaymentLinksPage() {
   const [error, setError] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const mpMode = useMpMode();
+  const sellerToken = useSellerToken();
 
   useEffect(() => {
     try {
@@ -157,7 +160,7 @@ export default function PaymentLinksPage() {
   }
 
   async function handleCopy(link: PayLink) {
-    const url = `${window.location.origin}${buildUrl(link)}`;
+    const url = `${window.location.origin}${buildUrl(link, sellerToken)}`;
     try {
       await navigator.clipboard.writeText(url);
       setCopiedId(link.id);
@@ -394,7 +397,7 @@ export default function PaymentLinksPage() {
                       )}
                     </button>
                     <a
-                      href={buildUrl(link)}
+                      href={buildUrl(link, sellerToken)}
                       target="_blank"
                       className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-zen-border bg-zen-card py-2 text-[12px] font-semibold text-zinc-300 transition hover:border-zen-red/40 hover:text-white"
                     >

@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { getPaymentStatus, isMercadoPagoEnabled } from "@/lib/mercadopago";
+import { authReady } from "@/lib/db";
+import { approveByMpId } from "@/lib/transactions";
 
 // Consulta se um PIX já foi pago.
 
@@ -15,5 +17,8 @@ export async function GET(req: Request) {
   }
 
   const result = await getPaymentStatus(id);
+  if (result.ok && result.status === "approved" && authReady()) {
+    approveByMpId(id).catch(() => {});
+  }
   return NextResponse.json(result, { status: result.ok ? 200 : 502 });
 }

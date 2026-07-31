@@ -37,12 +37,39 @@ const STORAGE_KEY = "zenpay_user";
 /** Recursos ainda não disponíveis — aparecem com cadeado no menu. */
 const LOCKED = ["Saque em Cripto"];
 
+function brlCents(cents: number): string {
+  return (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
+
+type Resumo = {
+  saldoDisponivel: number;
+  vendasPagas: number;
+  brutoPago: number;
+  brutoPendente: number;
+  qtdPendente: number;
+};
+
 export default function Dashboard() {
   const [user, setUser] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
   const [active, setActive] = useState("Dashboard");
   const [menuOpen, setMenuOpen] = useState(false);
   const [productModal, setProductModal] = useState(false);
+  const [resumo, setResumo] = useState<Resumo | null>(null);
+
+  useEffect(() => {
+    function load() {
+      fetch("/api/dashboard", { cache: "no-store" })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => {
+          if (d?.ok) setResumo(d.resumo);
+        })
+        .catch(() => {});
+    }
+    load();
+    const t = setInterval(load, 15000);
+    return () => clearInterval(t);
+  }, []);
 
   function handleCreateProduct(p: Product) {
     saveProducts([p, ...loadProducts()]);
@@ -147,7 +174,10 @@ export default function Dashboard() {
             <ThemesPage />
           ) : active === "Dashboard" ? (
             <>
-              <BalanceCard onQuickPay={() => setActive("Links de Pagamento")} />
+              <BalanceCard
+                onQuickPay={() => setActive("Links de Pagamento")}
+                saldo={resumo ? brlCents(resumo.saldoDisponivel) : undefined}
+              />
 
               {/* Stat cards */}
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -155,8 +185,8 @@ export default function Dashboard() {
                   icon={<IconTrendUp className="h-4.5 w-4.5" />}
                   iconClass="bg-emerald-500/10 text-emerald-400"
                   label="Vendas no período"
-                  value="R$ 0,00"
-                  sub="Hoje · 0 vendas aprovadas"
+                  value={resumo ? brlCents(resumo.brutoPago) : "R$ 0,00"}
+                  sub={`${resumo?.vendasPagas ?? 0} venda${(resumo?.vendasPagas ?? 0) === 1 ? "" : "s"} aprovada${(resumo?.vendasPagas ?? 0) === 1 ? "" : "s"}`}
                   trend="0%"
                   underline
                 />
@@ -164,8 +194,8 @@ export default function Dashboard() {
                   icon={<IconClock className="h-4.5 w-4.5" />}
                   iconClass="bg-amber-500/10 text-amber-400"
                   label="Vendas pendentes"
-                  value="R$ 120,00"
-                  sub="2 aguardando PIX"
+                  value={resumo ? brlCents(resumo.brutoPendente) : "R$ 0,00"}
+                  sub={`${resumo?.qtdPendente ?? 0} aguardando`}
                 />
                 <StatCard
                   icon={<IconPercent className="h-4.5 w-4.5" />}

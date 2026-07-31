@@ -59,6 +59,7 @@ export default function Checkout({ linkId }: { linkId: string }) {
   const allowDebito = sp.get("debito") === "1";
   const maxParcelas = Math.max(1, parseInt(sp.get("parcelas") || "1", 10) || 1);
   const modoCompleto = sp.get("modo") === "completo";
+  const sellerToken = sp.get("t") || undefined;
 
   const methods: Method[] = useMemo(() => {
     const m: Method[] = [];
@@ -417,6 +418,7 @@ export default function Checkout({ linkId }: { linkId: string }) {
                 defaultEmail={modoCompleto ? email : undefined}
                 defaultName={modoCompleto ? nome : undefined}
                 testMode={testMode}
+                sellerToken={sellerToken}
                 onApproved={aprovarPagamento}
               />
             ) : (
@@ -471,6 +473,7 @@ export default function Checkout({ linkId }: { linkId: string }) {
               description={desc}
               payerEmail={modoCompleto ? email : undefined}
               tipo={method === "debito" ? "debito" : "credito"}
+              sellerToken={sellerToken}
               onApproved={aprovarPagamento}
             />
           ) : (

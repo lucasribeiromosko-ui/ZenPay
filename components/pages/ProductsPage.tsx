@@ -9,6 +9,7 @@ import {
   saveProducts,
   checkoutPath,
 } from "@/lib/products";
+import { useSellerToken } from "../useSellerToken";
 import {
   IconBox,
   IconCart,
@@ -31,6 +32,7 @@ export default function ProductsPage({
   const [products, setProducts] = useState<Product[]>([]);
   const [busca, setBusca] = useState("");
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const sellerToken = useSellerToken();
 
   useEffect(() => {
     setProducts(loadProducts());
@@ -48,7 +50,7 @@ export default function ProductsPage({
 
   async function copy(p: Product) {
     try {
-      await navigator.clipboard.writeText(`${window.location.origin}${checkoutPath(p)}`);
+      await navigator.clipboard.writeText(`${window.location.origin}${checkoutPath(p, sellerToken)}`);
       setCopiedId(p.id);
       setTimeout(() => setCopiedId(null), 2000);
     } catch {
@@ -194,7 +196,7 @@ export default function ProductsPage({
                   )}
                 </button>
                 <a
-                  href={checkoutPath(p)}
+                  href={checkoutPath(p, sellerToken)}
                   target="_blank"
                   className="flex items-center justify-center gap-1.5 rounded-lg border border-zen-border bg-zen-card py-2 text-[11.5px] font-semibold text-zinc-300 transition hover:border-zen-red/40 hover:text-white"
                 >

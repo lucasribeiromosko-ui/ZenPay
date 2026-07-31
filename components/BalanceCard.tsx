@@ -5,10 +5,13 @@ import { IconQr, IconSend, IconEye, IconEyeOff } from "./icons";
 
 export default function BalanceCard({
   onQuickPay,
+  saldo,
 }: {
   onQuickPay?: () => void;
+  saldo?: string;
 }) {
   const [hidden, setHidden] = useState(false);
+  const valor = saldo ?? "R$ 0,00";
 
   return (
     <section className="zen-gradient-hero relative overflow-hidden rounded-2xl border border-zen-border">
@@ -42,7 +45,7 @@ export default function BalanceCard({
         </div>
 
         <p className="text-5xl font-extrabold tracking-tight sm:text-6xl">
-          {hidden ? "R$ ••••••" : "R$ 0,00"}
+          {hidden ? "R$ ••••••" : valor}
         </p>
 
         {/* Ações rápidas */}

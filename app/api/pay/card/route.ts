@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { chargeCard, isMercadoPagoEnabled } from "@/lib/mercadopago";
+import { authReady } from "@/lib/db";
+import { verifySeller, recordTransaction } from "@/lib/transactions";
 
 // Cobrança de cartão via Mercado Pago.
 // Recebe apenas um TOKEN de cartão (gerado no navegador) — nunca o
@@ -59,6 +61,20 @@ export async function POST(req: Request) {
       },
       idempotencyKey: `${token}-${Date.now()}`,
     });
+
+    const seller = verifySeller(typeof payload.sellerToken === "string" ? payload.sellerToken : null);
+    if (result.id && seller && authReady()) {
+      recordTransaction({
+        sellerEmail: seller,
+        mpPaymentId: result.id,
+        metodo: (paymentMethodId && /deb/i.test(paymentMethodId)) ? "debito" : "credito",
+        valorCents: Math.round(amount * 100),
+        status: result.status,
+        descricao: typeof payload.description === "string" ? payload.description : "Pagamento ZenPay",
+        payerEmail: email,
+      }).catch(() => {});
+    }
+
     return NextResponse.json(result, { status: result.ok ? 200 : 402 });
   } catch {
     return NextResponse.json(
