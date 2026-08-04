@@ -1,0 +1,13 @@
+# Segredos — NUNCA comitar
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+
+# Uploads temporários
+tmp/
+*.log
