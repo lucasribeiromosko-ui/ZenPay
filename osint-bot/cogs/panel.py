@@ -80,6 +80,7 @@ CATEGORIES = {
         "label": "🧰 Ferramentas",
         "desc": "Utilidades do dia a dia",
         "commands": [
+            ("/whatisthis", "Cole qualquer coisa e o bot diz o que é e qual comando usar.", "/whatisthis 142.248.80.127:5968"),
             ("/base64", "Codifica/decodifica Base64.", "/base64 decode aGVsbG8="),
             ("/useragent", "Analisa uma string de User-Agent.", "/useragent Mozilla/5.0…"),
         ],

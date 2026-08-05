@@ -1,5 +1,6 @@
-"""Utilidades: Base64 (codificar/decodificar) e análise de User-Agent."""
+"""Utilidades: /whatisthis (identifica o que é), Base64 e User-Agent."""
 import base64 as b64
+import re
 
 import discord
 from discord import app_commands
@@ -8,6 +9,55 @@ from discord.ext import commands
 import config
 from utils import embeds
 from utils import reply
+from utils.validators import parse_ip, is_valid_email, clean_domain
+
+_CVE_RE = re.compile(r"^CVE-\d{4}-\d{4,}$", re.I)
+_MAC_RE = re.compile(r"^([0-9a-f]{2}[:-]){5}[0-9a-f]{2}$", re.I)
+_HEX_RE = re.compile(r"^[0-9a-f]+$", re.I)
+_B64_RE = re.compile(r"^[A-Za-z0-9+/]{8,}={0,2}$")
+_IPPORT_RE = re.compile(r"^(\d{1,3}(?:\.\d{1,3}){3}):(\d{1,5})$")
+_HASH_LENS = {32: "MD5", 40: "SHA-1", 56: "SHA-224", 64: "SHA-256", 96: "SHA-384", 128: "SHA-512"}
+
+
+def _identify(value: str):
+    """Detecta o tipo do valor. Retorna (emoji, tipo, componentes, comandos)."""
+    v = value.strip()
+    low = v.lower()
+
+    if _CVE_RE.match(v):
+        return "🐛", "Identificador de vulnerabilidade (CVE)", [], [f"/cve {v.upper()}"]
+    if is_valid_email(v):
+        return "📧", "Endereço de e-mail", [], [f"/email {v}", f"/breach {v}"]
+    m = _IPPORT_RE.match(v)
+    if m and parse_ip(m.group(1)):
+        ip, port = m.group(1), m.group(2)
+        return ("🌐", "Endereço IP com porta",
+                [("IP", ip), ("Porta", port)],
+                [f"/ip {ip}", f"/ipwhois {ip}", f"/reversedns {ip}", f"/shodan {ip}"])
+    if parse_ip(v):
+        return "🌐", "Endereço IP", [], [f"/ip {v}", f"/ipwhois {v}", f"/reversedns {v}", f"/shodan {v}"]
+    if re.match(r"^AS\d+$", v, re.I):
+        return "📡", "Número de sistema autônomo (ASN)", [], [f"/asn {v.upper()}"]
+    if re.match(r"^\+\d[\d\s\-()]{6,}$", v):
+        return "📱", "Número de telefone", [], [f"/phone {v}"]
+    if low.startswith(("http://", "https://")):
+        return ("🔗", "URL / link", [],
+                [f"/headers {v}", f"/webscan {v}", f"/robots {v}", f"/wayback {v}"])
+    if _MAC_RE.match(v):
+        return "🖧", "Endereço MAC (placa de rede)", [("Fabricante", "consulte a OUI online")], []
+    if "mozilla/" in low or "applewebkit" in low or low.startswith(("curl/", "wget/")):
+        return "🧭", "String de User-Agent", [], [f"/useragent {v[:80]}"]
+    if _HEX_RE.match(v) and len(v) in _HASH_LENS:
+        return "#️⃣", f"Hash ({_HASH_LENS[len(v)]})", [], [f"/hash {v}"]
+    d = clean_domain(v)
+    if d:
+        return ("🌐", "Domínio / site", [],
+                [f"/whois {d}", f"/dns {d}", f"/subdomains {d}", f"/headers {d}", f"/dork {d}"])
+    if _B64_RE.match(v) and len(v) % 4 == 0:
+        return "🔐", "Possível texto em Base64", [], [f"/base64 (decode) {v[:40]}"]
+    if re.match(r"^@?[\w.\-]{2,40}$", v):
+        return "👤", "Possível nome de usuário", [], [f"/username {v.lstrip('@')}"]
+    return None, None, [], []
 
 # (marcador no texto, rótulo) — ordem importa (mais específico primeiro)
 OS_HINTS = [
@@ -27,6 +77,26 @@ class Toolbox(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
+
+    # ----------------------------------------------------------- WHATISTHIS
+    @app_commands.command(name="whatisthis", description="Cole qualquer coisa e o bot diz o que é e qual comando usar.")
+    @app_commands.describe(valor="IP, domínio, e-mail, telefone, hash, URL, CVE, username…")
+    async def whatisthis_cmd(self, interaction: discord.Interaction, valor: str):
+        emoji, tipo, comps, cmds = _identify(valor)
+        if not tipo:
+            e = embeds.error_embed("Não reconheci", f"Não consegui identificar `{valor.strip()[:80]}`.\n"
+                                   "Tente um IP, domínio, e-mail, telefone (+55…), hash, URL, CVE ou username.")
+            return await reply.send(interaction, e)
+        e = embeds.info_embed(f"{emoji} Isto é: {tipo}", f"`{valor.strip()[:200]}`")
+        for name, detail in comps:
+            embeds.add_field(e, name, detail, inline=True)
+        if cmds:
+            embeds.add_field(e, "✅ Comandos recomendados",
+                             "\n".join(f"`{c}`" for c in cmds))
+        else:
+            embeds.add_field(e, "ℹ️ Observação", "Ainda não tenho um comando específico para este tipo.")
+        e.set_footer(text=f"{config.BRAND_NAME} • copie um comando acima para investigar")
+        await reply.send(interaction, e)
 
     # --------------------------------------------------------------- BASE64
     @app_commands.command(name="base64", description="Codifica ou decodifica um texto em Base64.")
