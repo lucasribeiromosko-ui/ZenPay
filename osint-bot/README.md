@@ -43,7 +43,22 @@ Nenhuma chave de API é obrigatória — o bot funciona "de fábrica". `/shodan`
 
 ---
 
-## 🚀 Como colocar pra rodar (passo a passo)
+## ☁️ Rodar hospedado 24h (sem usar seu PC) — recomendado
+
+Para o bot ficar sempre online sem depender do seu computador, faça o deploy
+num host de aplicação. O projeto já vem pronto (`Dockerfile` + `railway.toml`):
+
+- **Railway** (mais fácil, pelo navegador): siga o **[DEPLOY-RAILWAY.md](DEPLOY-RAILWAY.md)**.
+- Também funciona em **Fly.io**, **Koyeb**, **Render** e qualquer host que rode
+  Docker — basta definir as variáveis de ambiente (`DISCORD_TOKEN`, etc.) no
+  painel da plataforma.
+
+> Nesses hosts você **não usa arquivo `.env`** — as variáveis são configuradas
+> no painel do serviço. O `config.py` lê direto do ambiente.
+
+---
+
+## 💻 Rodar localmente (passo a passo)
 
 ### 1. Criar o bot no Discord
 1. Acesse <https://discord.com/developers/applications> → **New Application**.

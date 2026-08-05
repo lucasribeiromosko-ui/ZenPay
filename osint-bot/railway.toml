@@ -1,0 +1,9 @@
+# Configuração do Railway. Como existe um Dockerfile, o Railway usa ele.
+# O bot reinicia sozinho se cair.
+[build]
+builder = "dockerfile"
+
+[deploy]
+startCommand = "python bot.py"
+restartPolicyType = "always"
+restartPolicyMaxRetries = 10
