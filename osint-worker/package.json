@@ -1,0 +1,15 @@
+{
+  "name": "fearsec-osint-worker",
+  "version": "1.0.0",
+  "description": "Bot OSINT para Discord rodando em Cloudflare Workers (modelo Interactions).",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "register": "node register.js"
+  },
+  "devDependencies": {
+    "wrangler": "^3.80.0"
+  }
+}

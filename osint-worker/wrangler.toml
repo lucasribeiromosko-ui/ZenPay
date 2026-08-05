@@ -1,0 +1,20 @@
+name = "fearsec-osint"
+main = "src/index.js"
+compatibility_date = "2024-09-23"
+
+# ----------------------------------------------------------------------
+# Variáveis PÚBLICAS (podem ficar aqui no arquivo).
+# Preencha com os dados da SUA aplicação do Discord.
+# ----------------------------------------------------------------------
+[vars]
+# General Information -> Application ID
+APPLICATION_ID = "COLE_SEU_APPLICATION_ID"
+# General Information -> Public Key
+DISCORD_PUBLIC_KEY = "COLE_SUA_PUBLIC_KEY"
+
+# ----------------------------------------------------------------------
+# SEGREDOS (NÃO ficam aqui!). Configure pelo terminal, um por vez:
+#   npx wrangler secret put SHODAN_API_KEY
+#   npx wrangler secret put HIBP_API_KEY
+# O bot funciona sem eles — só /shodan e /breach os exigem.
+# ----------------------------------------------------------------------
