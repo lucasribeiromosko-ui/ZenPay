@@ -68,13 +68,20 @@ CATEGORIES = {
             ("/cve", "Detalhes de uma vulnerabilidade (CVE).", "/cve CVE-2021-44228"),
         ],
     },
+    "busca": {
+        "label": "🔎 Busca & Dorks",
+        "desc": "Achar conteúdo público na web",
+        "commands": [
+            ("/buscar", "Acha arquivos públicos por título e tipo (Drive, PDF, planilha…).", "/buscar termo:folha de pagamento onde:Planilhas"),
+            ("/dork", "Investiga UM domínio: arquivos, logins e brechas expostas.", "/dork exemplo.com"),
+        ],
+    },
     "ferramentas": {
         "label": "🧰 Ferramentas",
         "desc": "Utilidades do dia a dia",
         "commands": [
             ("/base64", "Codifica/decodifica Base64.", "/base64 decode aGVsbG8="),
             ("/useragent", "Analisa uma string de User-Agent.", "/useragent Mozilla/5.0…"),
-            ("/dork", "Gera Google Dorks para investigação.", "/dork exemplo.com"),
         ],
     },
     "ajuda": {
@@ -168,7 +175,10 @@ class Panel(commands.Cog):
             "e responde **só para você** (ninguém mais vê).")
         embeds.add_field(e, "2️⃣ Investigando um site/domínio",
             "`/whois` → dono e datas\n`/dns` → servidores\n`/subdomains` → subdomínios\n"
-            "`/headers` → tecnologias\n`/webscan` → e-mails e links\n`/dork` → buscas prontas no Google")
+            "`/headers` → tecnologias\n`/webscan` → e-mails e links\n`/dork` → brechas do domínio")
+        embeds.add_field(e, "🔎 Achar arquivos públicos (`/buscar`)",
+            "Escolha **o tipo** (Google Drive, PDF, planilha, Trello…) e digite **o título** "
+            "que procura. O bot monta a busca pronta. Ex.: `/buscar` termo `contrato 2024` onde `PDF`.")
         embeds.add_field(e, "3️⃣ Investigando um IP",
             "`/ip` → localização e provedor\n`/ipwhois` → dono do bloco + abuse\n"
             "`/asn` → toda a rede de uma empresa\n`/shodan` → portas expostas (com chave)")

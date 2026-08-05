@@ -19,7 +19,7 @@ são de barra (`/`) e respondem com painéis organizados.
 > 🔒 **Privacidade:** todas as respostas são **privadas (ephemeral)** — só quem
 > executou o comando vê o resultado. Nada aparece para o resto do servidor.
 
-## 🧰 Ferramentas incluídas (28 comandos)
+## 🧰 Ferramentas incluídas (29 comandos)
 
 | Categoria | Comando | O que faz |
 |-----------|---------|-----------|
@@ -37,16 +37,17 @@ são de barra (`/`) e respondem com painéis organizados.
 | | `/robots exemplo.com` | robots.txt + sitemaps (caminhos escondidos) |
 | | `/wayback exemplo.com` | Histórico no Wayback Machine (archive.org) |
 | 👤 Pessoas | `/username fulano` | Procura o `@` em 12+ sites públicos |
-| | `/email pessoa@x.com` | Valida formato + checa MX |
+| | `/email pessoa@x.com` | Relatório completo: MX, SPF/DMARC, provedor, Gravatar, vazamentos |
 | | `/breach pessoa@x.com` | Vazamentos (grátis via XposedOrNot; HIBP se tiver chave) |
 | | `/phone +5511999998888` | Valida telefone: país, operadora, tipo |
 | 🖼️ Arquivos | `/exif [anexo]` | Câmera, data e GPS de uma foto |
 | | `/reverseimage [anexo/url]` | Busca reversa (Google, Yandex, Bing, TinEye) |
 | 🔐 Segurança | `/hash <hash>` | Identifica e quebra hash (MD5/SHA) |
 | | `/cve CVE-2021-44228` | Detalhes de uma vulnerabilidade (NVD) |
+| 🔎 Busca & Dorks | `/buscar termo onde` | Acha arquivos públicos por título e tipo (Drive, PDF, planilha, Trello…) |
+| | `/dork exemplo.com` | Investiga um domínio: arquivos, logins e brechas expostas |
 | 🧰 Ferramentas | `/base64 encode/decode` | Codifica/decodifica Base64 |
 | | `/useragent <ua>` | Analisa uma string de User-Agent |
-| | `/dork exemplo.com` | Gera Google Dorks para investigação |
 | ℹ️ Ajuda | `/painel` `/osint` | Menu interativo por categoria |
 | | `/ajuda` | Lista rápida de todos os comandos |
 | | `/tutorial` | Guia passo a passo para começar |

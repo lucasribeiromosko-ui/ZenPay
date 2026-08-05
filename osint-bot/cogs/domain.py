@@ -13,7 +13,7 @@ import whois
 
 from utils import embeds, http
 from utils import reply
-from utils.validators import clean_domain
+from utils.validators import clean_domain, registrable_domain
 
 DNS_RECORDS = ["A", "AAAA", "MX", "NS", "TXT", "CNAME", "SOA"]
 
@@ -31,23 +31,34 @@ class Domain(commands.Cog):
         domain = clean_domain(dominio)
         if not domain:
             return await reply.send(interaction, embeds.error_embed("Domínio inválido", f"`{dominio}` não parece um domínio válido."))
+        reg = registrable_domain(domain)
         await reply.defer(interaction)
-        try:
-            # python-whois é síncrono → roda em thread para não travar o bot
-            data = await asyncio.to_thread(whois.whois, domain)
-        except Exception as e:
-            return await reply.send(interaction, embeds.error_embed("Falha no WHOIS", f"Não consegui consultar `{domain}`.\n`{e}`"))
 
-        e = embeds.info_embed(f"WHOIS — {domain}")
-        embeds.add_field(e, "Registrar", _first(data.get("registrar")))
-        embeds.add_field(e, "Organização", _first(data.get("org")))
-        embeds.add_field(e, "País", _first(data.get("country")), inline=True)
-        embeds.add_field(e, "Criado em", _fmt_date(data.get("creation_date")), inline=True)
-        embeds.add_field(e, "Expira em", _fmt_date(data.get("expiration_date")), inline=True)
-        ns = data.get("name_servers")
-        if ns:
-            ns_list = sorted({str(n).lower() for n in ns}) if isinstance(ns, (list, set)) else [str(ns)]
-            embeds.add_field(e, "Name servers", "\n".join(ns_list[:8]))
+        # 1) RDAP (mais confiável e estruturado); 2) python-whois como reserva
+        data = await _whois_via_rdap(reg)
+        if not data or not (data.get("created") or data.get("registrar")):
+            legacy = await _whois_via_legacy(reg)
+            if legacy and (legacy.get("created") or legacy.get("registrar")):
+                data = legacy
+        if not data:
+            return await reply.send(interaction, embeds.error_embed(
+                "Sem dados de registro", f"Não encontrei registro para `{reg}` (pode não existir ou o TLD não expor)."))
+
+        e = embeds.info_embed(f"WHOIS — {reg}")
+        if reg != domain:
+            embeds.add_field(e, "ℹ️ Observação", f"`{domain}` é um subdomínio. Mostrando o registro de **{reg}**.")
+        embeds.add_field(e, "Registrar", data.get("registrar"))
+        embeds.add_field(e, "Organização", data.get("org"))
+        embeds.add_field(e, "País", data.get("country"), inline=True)
+        embeds.add_field(e, "Criado em", data.get("created"), inline=True)
+        embeds.add_field(e, "Expira em", data.get("expires"), inline=True)
+        if data.get("updated"):
+            embeds.add_field(e, "Atualizado em", data.get("updated"), inline=True)
+        if data.get("status"):
+            embeds.add_field(e, "Status", data.get("status"))
+        if data.get("nameservers"):
+            embeds.add_field(e, "Name servers", "\n".join(data["nameservers"][:8]))
+        e.set_footer(text=f"FearSec OSINT • fonte: {data.get('source', '—')}")
         await reply.send(interaction, e)
 
     # ------------------------------------------------------------------ DNS
@@ -135,6 +146,81 @@ class Domain(commands.Cog):
         await reply.send(interaction, e)
 
 
+async def _whois_via_rdap(domain: str):
+    """Consulta RDAP e normaliza os campos. Retorna dict ou None."""
+    try:
+        j = await http.fetch_json(f"https://rdap.org/domain/{domain}")
+    except Exception:
+        return None
+    events = {}
+    for ev in j.get("events", []):
+        events[ev.get("eventAction")] = (ev.get("eventDate") or "")[:10]
+    registrar = org = country = None
+    for ent in j.get("entities", []):
+        roles = ent.get("roles") or []
+        fn, _c = _vcard_fn_country(ent.get("vcardArray"))
+        if "registrar" in roles and not registrar:
+            registrar = fn
+        if ("registrant" in roles or "administrative" in roles):
+            org = org or fn
+            country = country or _c
+    ns = [n.get("ldhName", "").lower() for n in j.get("nameservers", []) if n.get("ldhName")]
+    return {
+        "registrar": registrar,
+        "org": org,
+        "country": country,
+        "created": events.get("registration"),
+        "expires": events.get("expiration"),
+        "updated": events.get("last changed"),
+        "status": ", ".join(j.get("status", [])) or None,
+        "nameservers": ns,
+        "source": "RDAP",
+    }
+
+
+async def _whois_via_legacy(domain: str):
+    """python-whois (porta 43) como reserva. Retorna dict normalizado ou None."""
+    try:
+        data = await asyncio.to_thread(whois.whois, domain)
+    except Exception:
+        return None
+    if not data:
+        return None
+    ns = data.get("name_servers")
+    if isinstance(ns, (list, set)):
+        ns_list = sorted({str(n).lower() for n in ns})
+    elif ns:
+        ns_list = [str(ns).lower()]
+    else:
+        ns_list = []
+    return {
+        "registrar": _first(data.get("registrar")),
+        "org": _first(data.get("org")),
+        "country": _first(data.get("country")),
+        "created": _fmt_date(data.get("creation_date")),
+        "expires": _fmt_date(data.get("expiration_date")),
+        "updated": _fmt_date(data.get("updated_date")),
+        "status": None,
+        "nameservers": ns_list,
+        "source": "WHOIS (porta 43)",
+    }
+
+
+def _vcard_fn_country(vcard):
+    """Extrai (nome, país) de um vcardArray do RDAP."""
+    fn = country = None
+    if not vcard or len(vcard) < 2:
+        return fn, country
+    for item in vcard[1]:
+        if not isinstance(item, list) or len(item) < 4:
+            continue
+        if item[0] == "fn":
+            fn = item[3]
+        elif item[0] == "adr" and isinstance(item[3], list):
+            country = item[3][-1] or None
+    return fn, country
+
+
 def _get_cert(domain: str) -> dict:
     """Conecta na porta 443 e retorna o certificado apresentado (bloqueante)."""
     ctx = ssl.create_default_context()
@@ -154,7 +240,7 @@ def _fmt_date(value):
     d = _first(value)
     if isinstance(d, datetime):
         return d.astimezone(timezone.utc).strftime("%Y-%m-%d")
-    return str(d) if d else "—"
+    return str(d) if d else None
 
 
 async def setup(bot):

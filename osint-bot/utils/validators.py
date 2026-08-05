@@ -2,10 +2,26 @@
 import ipaddress
 import re
 
+import tldextract
+
 _DOMAIN_RE = re.compile(
     r"^(?=.{1,253}$)(?!-)[A-Za-z0-9-]{1,63}(?<!-)(\.[A-Za-z0-9-]{1,63})+$"
 )
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+# Usa a Public Suffix List embutida (sem baixar nada em runtime).
+_extract = tldextract.TLDExtract(suffix_list_urls=())
+
+
+def registrable_domain(domain: str) -> str:
+    """Reduz um domínio ao domínio registrável (ex.: sub.exemplo.com -> exemplo.com).
+
+    Lida com TLDs compostos (.com.br, .co.uk) via Public Suffix List.
+    """
+    if not domain:
+        return domain
+    ext = _extract(domain)
+    return ext.registered_domain or domain
 
 
 def clean_domain(raw: str) -> str | None:
