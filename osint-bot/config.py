@@ -14,6 +14,10 @@ GUILD_ID = int(_guild) if _guild.isdigit() else None
 # Chaves opcionais
 SHODAN_API_KEY = os.getenv("SHODAN_API_KEY", "").strip()
 HIBP_API_KEY = os.getenv("HIBP_API_KEY", "").strip()
+# Cookie de sessão do Instagram (opcional) — faz o /instagram funcionar mesmo
+# a partir de servidores/datacenter. Pegue o valor do cookie "sessionid" da
+# sua conta logada no navegador. Risco: automação pode sinalizar a conta.
+IG_SESSIONID = os.getenv("IG_SESSIONID", "").strip()
 
 # Identidade da FearSec exibida nos rodapés dos embeds
 BRAND_NAME = "FearSec OSINT"

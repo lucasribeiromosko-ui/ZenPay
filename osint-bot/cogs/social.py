@@ -104,9 +104,14 @@ class Social(commands.Cog):
             return await reply.send(interaction, embeds.error_embed(
                 "Perfil não encontrado", f"`@{user}` não existe ou foi removido."))
         if status != "ok":
-            e = embeds.error_embed("Instagram bloqueou a consulta",
-                f"O Instagram limitou a leitura automática agora.\n"
-                f"Veja direto: https://www.instagram.com/{user}/")
+            e = embeds.error_embed("Instagram bloqueou a leitura automática",
+                "O Instagram recusa consultas vindas de **servidores** (o bot roda em "
+                "datacenter). É proteção anti-bot do Instagram, não um erro do bot.")
+            embeds.add_field(e, "Ver o perfil direto", f"https://www.instagram.com/{user}/")
+            if not config.IG_SESSIONID:
+                embeds.add_field(e, "🔓 Como fazer funcionar",
+                    "Defina a variável **`IG_SESSIONID`** no Railway com o cookie `sessionid` "
+                    "da sua conta logada. Aí o bot lê perfis públicos normalmente.")
             return await reply.send(interaction, e)
 
         verified = data.get("is_verified")
@@ -167,6 +172,8 @@ async def _ig_api(user: str):
     """API oficial web_profile_info. ('ok', normalizado) | 'notfound' | 'blocked'."""
     url = f"https://i.instagram.com/api/v1/users/web_profile_info/?username={user}"
     headers = {"x-ig-app-id": "936619743392459", "User-Agent": _UA, "Accept": "application/json"}
+    if config.IG_SESSIONID:
+        headers["Cookie"] = f"sessionid={config.IG_SESSIONID}"
     try:
         session = await http.get_session()
         async with session.get(url, headers=headers) as resp:
@@ -200,6 +207,8 @@ async def _ig_html(user: str):
     """Fallback: lê os metadados og: da página pública (funciona quando a API bloqueia)."""
     url = f"https://www.instagram.com/{user}/"
     headers = {"User-Agent": _UA, "Accept-Language": "en-US,en;q=0.9"}
+    if config.IG_SESSIONID:
+        headers["Cookie"] = f"sessionid={config.IG_SESSIONID}"
     try:
         session = await http.get_session()
         async with session.get(url, headers=headers, allow_redirects=True) as resp:
