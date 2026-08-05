@@ -95,46 +95,41 @@ class Social(commands.Cog):
             return await reply.send(interaction, embeds.error_embed(
                 "Usuário inválido", "Use só o @ do perfil, ex.: `instagram`."))
         await reply.defer(interaction)
-        status, data = await _ig_profile(user)
+        # 1) API oficial (dados ricos); 2) fallback via metadados da página (og:)
+        status, data = await _ig_api(user)
+        if status == "blocked":
+            status, data = await _ig_html(user)
 
         if status == "notfound":
             return await reply.send(interaction, embeds.error_embed(
                 "Perfil não encontrado", f"`@{user}` não existe ou foi removido."))
         if status != "ok":
-            # Instagram costuma bloquear IPs de datacenter — dá o link direto
             e = embeds.error_embed("Instagram bloqueou a consulta",
-                f"O Instagram limitou a leitura automática agora (HTTP {data}).\n"
+                f"O Instagram limitou a leitura automática agora.\n"
                 f"Veja direto: https://www.instagram.com/{user}/")
             return await reply.send(interaction, e)
 
-        full = data.get("full_name") or "—"
-        bio = data.get("biography") or "—"
-        followers = (data.get("edge_followed_by") or {}).get("count", 0)
-        following = (data.get("edge_follow") or {}).get("count", 0)
-        posts = (data.get("edge_owner_to_timeline_media") or {}).get("count", 0)
         verified = data.get("is_verified")
-        private = data.get("is_private")
-        ext = data.get("external_url")
-        pic = data.get("profile_pic_url_hd") or data.get("profile_pic_url")
-        uid = data.get("id")
-        cat = data.get("category_name")
-
-        e = embeds.info_embed(f"📸 Instagram — @{user}", f"**{full}**" + ("  ☑️" if verified else ""))
-        if pic:
-            e.set_thumbnail(url=pic)
-        embeds.add_field(e, "Seguidores", f"{followers:,}".replace(",", "."), inline=True)
-        embeds.add_field(e, "Seguindo", f"{following:,}".replace(",", "."), inline=True)
-        embeds.add_field(e, "Publicações", f"{posts:,}".replace(",", "."), inline=True)
-        embeds.add_field(e, "Conta", "🔒 privada" if private else "🌐 pública", inline=True)
-        if cat:
-            embeds.add_field(e, "Categoria", cat, inline=True)
-        if uid:
-            embeds.add_field(e, "ID numérico", uid, inline=True)
-        embeds.add_field(e, "Bio", bio[:500])
-        if ext:
-            embeds.add_field(e, "Link externo", ext)
+        e = embeds.info_embed(f"📸 Instagram — @{user}",
+                              f"**{data.get('full_name') or '—'}**" + ("  ☑️" if verified else ""))
+        if data.get("profile_pic"):
+            e.set_thumbnail(url=data["profile_pic"])
+        embeds.add_field(e, "Seguidores", data.get("followers") or "—", inline=True)
+        embeds.add_field(e, "Seguindo", data.get("following") or "—", inline=True)
+        embeds.add_field(e, "Publicações", data.get("posts") or "—", inline=True)
+        if data.get("is_private") is not None:
+            embeds.add_field(e, "Conta", "🔒 privada" if data["is_private"] else "🌐 pública", inline=True)
+        if data.get("category"):
+            embeds.add_field(e, "Categoria", data["category"], inline=True)
+        if data.get("uid"):
+            embeds.add_field(e, "ID numérico", data["uid"], inline=True)
+        if data.get("biography"):
+            embeds.add_field(e, "Bio", data["biography"][:500])
+        if data.get("external_url"):
+            embeds.add_field(e, "Link externo", data["external_url"])
         embeds.add_field(e, "Perfil", f"https://www.instagram.com/{user}/")
-        e.set_footer(text=f"{config.BRAND_NAME} • dados públicos do perfil")
+        src = "API" if data.get("source") == "api" else "metadados públicos"
+        e.set_footer(text=f"{config.BRAND_NAME} • dados públicos do perfil • fonte: {src}")
         await reply.send(interaction, e)
 
     # ------------------------------------------------------------- SHERLOCK
@@ -161,8 +156,15 @@ class Social(commands.Cog):
         await reply.send(interaction, e)
 
 
-async def _ig_profile(user: str):
-    """Retorna ('ok', dados) | ('notfound', None) | ('blocked', status)."""
+def _fmt_int(n):
+    try:
+        return f"{int(n):,}".replace(",", ".")
+    except (TypeError, ValueError):
+        return None
+
+
+async def _ig_api(user: str):
+    """API oficial web_profile_info. ('ok', normalizado) | 'notfound' | 'blocked'."""
     url = f"https://i.instagram.com/api/v1/users/web_profile_info/?username={user}"
     headers = {"x-ig-app-id": "936619743392459", "User-Agent": _UA, "Accept": "application/json"}
     try:
@@ -178,7 +180,65 @@ async def _ig_profile(user: str):
     u = (payload.get("data") or {}).get("user")
     if not u:
         return "notfound", None
-    return "ok", u
+    return "ok", {
+        "full_name": u.get("full_name"),
+        "biography": u.get("biography"),
+        "followers": _fmt_int((u.get("edge_followed_by") or {}).get("count")),
+        "following": _fmt_int((u.get("edge_follow") or {}).get("count")),
+        "posts": _fmt_int((u.get("edge_owner_to_timeline_media") or {}).get("count")),
+        "is_private": u.get("is_private"),
+        "is_verified": u.get("is_verified"),
+        "external_url": u.get("external_url"),
+        "profile_pic": u.get("profile_pic_url_hd") or u.get("profile_pic_url"),
+        "uid": u.get("id"),
+        "category": u.get("category_name"),
+        "source": "api",
+    }
+
+
+async def _ig_html(user: str):
+    """Fallback: lê os metadados og: da página pública (funciona quando a API bloqueia)."""
+    url = f"https://www.instagram.com/{user}/"
+    headers = {"User-Agent": _UA, "Accept-Language": "en-US,en;q=0.9"}
+    try:
+        session = await http.get_session()
+        async with session.get(url, headers=headers, allow_redirects=True) as resp:
+            if resp.status == 404:
+                return "notfound", None
+            if resp.status != 200:
+                return "blocked", resp.status
+            html = await resp.text()
+    except Exception as ex:
+        return "blocked", str(ex)[:40]
+
+    def meta(prop):
+        m = re.search(rf'<meta property="{re.escape(prop)}" content="([^"]*)"', html)
+        return m.group(1) if m else None
+
+    desc = meta("og:description") or ""
+    title = meta("og:title") or ""
+    image = meta("og:image")
+    counts = re.search(r'([\d.,KMkm]+)\s+Followers,\s*([\d.,KMkm]+)\s+Following,\s*([\d.,KMkm]+)\s+Posts', desc)
+    if not counts and not title:
+        return "blocked", "sem metadados"
+    name = None
+    tm = re.search(r'^(.*?)\s*\(@', title)
+    if tm:
+        name = tm.group(1).strip()
+    return "ok", {
+        "full_name": name,
+        "biography": None,
+        "followers": counts.group(1) if counts else None,
+        "following": counts.group(2) if counts else None,
+        "posts": counts.group(3) if counts else None,
+        "is_private": None,
+        "is_verified": None,
+        "external_url": None,
+        "profile_pic": image,
+        "uid": None,
+        "category": None,
+        "source": "html",
+    }
 
 
 async def _check(name, template, reliable, uname):
