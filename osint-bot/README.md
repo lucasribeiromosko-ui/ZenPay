@@ -19,7 +19,7 @@ são de barra (`/`) e respondem com painéis organizados.
 > 🔒 **Privacidade:** todas as respostas são **privadas (ephemeral)** — só quem
 > executou o comando vê o resultado. Nada aparece para o resto do servidor.
 
-## 🧰 Ferramentas incluídas (33 comandos)
+## 🧰 Ferramentas incluídas (38 comandos)
 
 | Categoria | Comando | O que faz |
 |-----------|---------|-----------|
@@ -37,6 +37,8 @@ são de barra (`/`) e respondem com painéis organizados.
 | | `/webscan exemplo.com` | Extrai e-mails, links e metadados |
 | | `/robots exemplo.com` | robots.txt + sitemaps (caminhos escondidos) |
 | | `/wayback exemplo.com` | Histórico no Wayback Machine (archive.org) |
+| | `/screenshot exemplo.com` | Print/preview do site |
+| | `/urlscan exemplo.com` | Scans públicos do domínio (phishing/scam) |
 | 👤 Pessoas | `/username fulano` | Procura o `@` em 21 sites (rápido) |
 | | `/sherlock fulano` | Varredura do `@` em 50+ sites (completa) |
 | | `/email pessoa@x.com` | Relatório completo: MX, SPF/DMARC, provedor, Gravatar, vazamentos |
@@ -47,6 +49,9 @@ são de barra (`/`) e respondem com painéis organizados.
 | | `/reverseimage [anexo/url]` | Busca reversa (Google, Yandex, Bing, TinEye) |
 | 🔐 Segurança | `/hash <hash>` | Identifica e quebra hash (MD5/SHA) |
 | | `/cve CVE-2021-44228` | Detalhes de uma vulnerabilidade (NVD) |
+| 🎮 Discord | `/discord <id>` | Investiga conta pelo ID (nome, criação, badges) |
+| | `/snowflake <id>` | Data de criação de qualquer ID do Discord |
+| | `/ping` | Status e latência do bot |
 | 🔎 Busca & Dorks | `/buscar termo onde` | Acha arquivos públicos por título e tipo (Drive, PDF, planilha, Trello…) |
 | | `/dork exemplo.com` | Investiga um domínio: arquivos, logins e brechas expostas |
 | 🧰 Ferramentas | `/base64 encode/decode` | Codifica/decodifica Base64 |

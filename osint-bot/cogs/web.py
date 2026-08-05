@@ -176,6 +176,52 @@ class Web(commands.Cog):
         await reply.send(interaction, e)
 
 
+    # ------------------------------------------------------------ SCREENSHOT
+    @app_commands.command(name="screenshot", description="Tira um print de um site (preview sem precisar visitar).")
+    @app_commands.describe(url="Ex.: exemplo.com")
+    async def screenshot_cmd(self, interaction: discord.Interaction, url: str):
+        await reply.defer(interaction)
+        safe, info = await resolve_public_url(url)
+        if not safe:
+            return await reply.send(interaction, embeds.error_embed("URL bloqueada", info))
+        shot = f"https://image.thum.io/get/width/1200/noanimate/{safe}"
+        e = embeds.info_embed(f"Screenshot — {info}", f"Preview de {safe}")
+        e.set_image(url=shot)
+        embeds.add_field(e, "Abrir imagem", f"[clique aqui]({shot})", inline=True)
+        embeds.add_field(e, "Abrir site", f"[{info}]({safe})", inline=True)
+        e.set_footer(text="FearSec OSINT • preview gerado sob demanda; pode levar alguns segundos.")
+        await reply.send(interaction, e)
+
+    # -------------------------------------------------------------- URLSCAN
+    @app_commands.command(name="urlscan", description="Scans recentes de um domínio no urlscan.io (útil para phishing/scam).")
+    @app_commands.describe(dominio="Ex.: exemplo.com")
+    async def urlscan_cmd(self, interaction: discord.Interaction, dominio: str):
+        domain = clean_domain(dominio)
+        if not domain:
+            return await reply.send(interaction, embeds.error_embed("Domínio inválido", "Ex.: `exemplo.com`"))
+        await reply.defer(interaction)
+        try:
+            data = await http.fetch_json(f"https://urlscan.io/api/v1/search/?q=domain:{domain}&size=6")
+        except Exception as e:
+            return await reply.send(interaction, embeds.error_embed("Falha na consulta", f"`{e}`"))
+        results = data.get("results", [])
+        if not results:
+            return await reply.send(interaction, embeds.info_embed(
+                f"urlscan.io — {domain}", "Nenhum scan público encontrado para este domínio."))
+        e = embeds.info_embed(f"urlscan.io — {domain}",
+                              f"{data.get('total', 0)} scan(s) no total — mostrando até 6:")
+        for r in results[:6]:
+            page = r.get("page", {})
+            task = r.get("task", {})
+            when = (task.get("time") or "")[:10]
+            ip = page.get("ip") or "?"
+            link = r.get("result", "")
+            embeds.add_field(e, (page.get("url") or domain)[:90],
+                             f"[ver scan]({link}) • {when} • IP: `{ip}` • {page.get('server') or ''}")
+        e.set_footer(text="FearSec OSINT • fonte: urlscan.io (scans públicos)")
+        await reply.send(interaction, e)
+
+
 def _detect_tech(headers: dict, html: str):
     found = set()
     lower_headers = {k.lower(): str(v).lower() for k, v in headers.items()}

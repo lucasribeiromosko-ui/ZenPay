@@ -41,6 +41,8 @@ CATEGORIES = {
             ("/webscan", "Extrai e-mails, links e metadados da página.", "/webscan exemplo.com"),
             ("/robots", "Lê robots.txt e sitemap (caminhos escondidos).", "/robots exemplo.com"),
             ("/wayback", "Histórico do site no Wayback Machine.", "/wayback exemplo.com"),
+            ("/screenshot", "Tira um print do site (preview seguro).", "/screenshot exemplo.com"),
+            ("/urlscan", "Scans de phishing/scam do domínio (urlscan.io).", "/urlscan exemplo.com"),
         ],
     },
     "pessoas": {
@@ -75,6 +77,15 @@ CATEGORIES = {
         "commands": [
             ("/hash", "Identifica e quebra hash (MD5/SHA).", "/hash e10adc39…"),
             ("/cve", "Detalhes de uma vulnerabilidade (CVE).", "/cve CVE-2021-44228"),
+        ],
+    },
+    "discord": {
+        "label": "🎮 Discord",
+        "desc": "Investigar contas e IDs do Discord",
+        "commands": [
+            ("/discord", "Investiga uma conta pelo ID (nome, criação, badges).", "/discord 123456789012345678"),
+            ("/snowflake", "Data de criação de qualquer ID do Discord.", "/snowflake 123456789012345678"),
+            ("/ping", "Status e latência do bot.", "/ping"),
         ],
     },
     "busca": {
