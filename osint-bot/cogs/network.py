@@ -1,5 +1,6 @@
 """Ferramentas de rede: geolocalização de IP, DNS reverso e Shodan (opcional)."""
 import asyncio
+import re
 import socket
 
 import discord
@@ -123,6 +124,29 @@ class Network(commands.Cog):
             embeds.add_field(e, f"Prefixos IPv6 ({len(v6)})", "\n".join(v6[:10]))
         if len(v4) > 25:
             embeds.add_field(e, "Obs.", f"+{len(v4) - 25} prefixos IPv4 não exibidos.")
+        await reply.send(interaction, e)
+
+    # ------------------------------------------------------------------- MAC
+    @app_commands.command(name="mac", description="Fabricante (vendor) de um endereço MAC de placa de rede.")
+    @app_commands.describe(mac="Ex.: 00:1A:2B:3C:4D:5E")
+    async def mac_cmd(self, interaction: discord.Interaction, mac: str):
+        m = mac.strip()
+        if not re.match(r"^([0-9A-Fa-f]{2}[:\-]){5}[0-9A-Fa-f]{2}$", m):
+            return await reply.send(interaction, embeds.error_embed(
+                "MAC inválido", "Formato: `00:1A:2B:3C:4D:5E`."))
+        await reply.defer(interaction)
+        try:
+            session = await http.get_session()
+            async with session.get(f"https://api.macvendors.com/{m}") as resp:
+                if resp.status == 404:
+                    return await reply.send(interaction, embeds.error_embed(
+                        "Fabricante não encontrado", f"Nenhum fabricante registrado para `{m}`."))
+                vendor = (await resp.text()).strip()
+        except Exception as e:
+            return await reply.send(interaction, embeds.error_embed("Falha na consulta", f"`{e}`"))
+        e = embeds.info_embed(f"MAC — {m}")
+        embeds.add_field(e, "Fabricante (OUI)", vendor or "—")
+        embeds.add_field(e, "Prefixo OUI", m[:8].upper(), inline=True)
         await reply.send(interaction, e)
 
     # ---------------------------------------------------------------- SHODAN

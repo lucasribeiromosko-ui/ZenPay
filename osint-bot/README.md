@@ -19,7 +19,7 @@ são de barra (`/`) e respondem com painéis organizados.
 > 🔒 **Privacidade:** todas as respostas são **privadas (ephemeral)** — só quem
 > executou o comando vê o resultado. Nada aparece para o resto do servidor.
 
-## 🧰 Ferramentas incluídas (29 comandos)
+## 🧰 Ferramentas incluídas (33 comandos)
 
 | Categoria | Comando | O que faz |
 |-----------|---------|-----------|
@@ -31,15 +31,18 @@ são de barra (`/`) e respondem com painéis organizados.
 | | `/ipwhois 8.8.8.8` | Dono do bloco de IP + contato de abuse (RDAP) |
 | | `/reversedns 8.8.8.8` | PTR de um IP, ou IPs de um domínio |
 | | `/asn AS15169` | Prefixos de IP e organização de um ASN (RIPEstat) |
+| | `/mac 00:1A:2B:3C:4D:5E` | Fabricante de um endereço MAC (OUI) |
 | | `/shodan 8.8.8.8` | Portas/serviços expostos *(chave opcional)* |
 | 🕸️ Web & Sites | `/headers exemplo.com` | Cabeçalhos HTTP, tecnologias, segurança |
 | | `/webscan exemplo.com` | Extrai e-mails, links e metadados |
 | | `/robots exemplo.com` | robots.txt + sitemaps (caminhos escondidos) |
 | | `/wayback exemplo.com` | Histórico no Wayback Machine (archive.org) |
-| 👤 Pessoas | `/username fulano` | Procura o `@` em 12+ sites públicos |
+| 👤 Pessoas | `/username fulano` | Procura o `@` em 21 sites (rápido) |
+| | `/sherlock fulano` | Varredura do `@` em 50+ sites (completa) |
 | | `/email pessoa@x.com` | Relatório completo: MX, SPF/DMARC, provedor, Gravatar, vazamentos |
 | | `/breach pessoa@x.com` | Vazamentos (grátis via XposedOrNot; HIBP se tiver chave) |
 | | `/phone +5511999998888` | Valida telefone: país, operadora, tipo |
+| 📸 Instagram | `/instagram usuario` | Nome, bio, seguidores, foto e ID de um perfil público |
 | 🖼️ Arquivos | `/exif [anexo]` | Câmera, data e GPS de uma foto |
 | | `/reverseimage [anexo/url]` | Busca reversa (Google, Yandex, Bing, TinEye) |
 | 🔐 Segurança | `/hash <hash>` | Identifica e quebra hash (MD5/SHA) |

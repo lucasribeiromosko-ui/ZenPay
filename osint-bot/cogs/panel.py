@@ -29,6 +29,7 @@ CATEGORIES = {
             ("/ipwhois", "Dono do bloco de IP e contato de abuse (RDAP).", "/ipwhois 8.8.8.8"),
             ("/reversedns", "Nome (PTR) de um IP, ou IPs de um domínio.", "/reversedns 8.8.8.8"),
             ("/asn", "Prefixos de IP e organização de um ASN.", "/asn AS15169"),
+            ("/mac", "Fabricante de um endereço MAC.", "/mac 00:1A:2B:3C:4D:5E"),
             ("/shodan", "Portas e serviços expostos (precisa de chave).", "/shodan 8.8.8.8"),
         ],
     },
@@ -46,10 +47,18 @@ CATEGORIES = {
         "label": "👤 Pessoas & Identidade",
         "desc": "Rastrear identidades digitais públicas",
         "commands": [
-            ("/username", "Procura o @ em 12+ sites públicos.", "/username fulano"),
-            ("/email", "Valida e-mail e checa MX do domínio.", "/email a@b.com"),
+            ("/username", "Procura o @ em 21 sites (rápido).", "/username fulano"),
+            ("/sherlock", "Varredura completa do @ em 50+ sites.", "/sherlock fulano"),
+            ("/email", "Relatório completo do e-mail.", "/email a@b.com"),
             ("/breach", "E-mail em vazamentos (grátis).", "/breach a@b.com"),
             ("/phone", "Valida telefone: país, operadora, tipo.", "/phone +5511999998888"),
+        ],
+    },
+    "instagram": {
+        "label": "📸 Instagram",
+        "desc": "Dados públicos de perfis do Instagram",
+        "commands": [
+            ("/instagram", "Nome, bio, seguidores, foto e mais de um perfil.", "/instagram instagram"),
         ],
     },
     "arquivos": {
@@ -184,7 +193,8 @@ class Panel(commands.Cog):
             "`/ip` → localização e provedor\n`/ipwhois` → dono do bloco + abuse\n"
             "`/asn` → toda a rede de uma empresa\n`/shodan` → portas expostas (com chave)")
         embeds.add_field(e, "4️⃣ Investigando uma pessoa/identidade",
-            "`/username` → perfis em 12+ sites\n`/email` → valida e-mail\n"
+            "`/username` → perfis (rápido)\n`/sherlock` → varredura em 50+ sites\n"
+            "`/instagram` → nome, bio e seguidores de um perfil\n`/email` → relatório do e-mail\n"
             "`/breach` → apareceu em vazamentos?\n`/phone` → país e operadora")
         embeds.add_field(e, "5️⃣ Imagens e arquivos",
             "`/exif` → data, câmera e **GPS** de uma foto\n`/reverseimage` → onde mais a imagem aparece")
