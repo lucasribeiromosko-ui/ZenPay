@@ -269,7 +269,7 @@ async def _gravatar(addr):
             data = await resp.json()
         entry = (data.get("entry") or [{}])[0]
         name = entry.get("displayName") or (entry.get("name") or {}).get("formatted")
-        profile = entry.get("profileUrl")
+        profile = entry.get("profileUrl") or f"https://gravatar.com/{h}"
         return f"[{name or 'ver perfil'}]({profile}) • avatar público"
     except Exception:
         return None

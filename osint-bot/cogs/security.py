@@ -46,7 +46,7 @@ class Security(commands.Cog):
                 sev = cd.get("baseSeverity") or m.get("baseSeverity")
                 break
 
-        refs = [r.get("url") for r in cve.get("references", [])][:5]
+        refs = [u for r in cve.get("references", []) if (u := r.get("url"))][:5]
         published = (cve.get("published") or "")[:10]
 
         color = config.INFO_COLOR

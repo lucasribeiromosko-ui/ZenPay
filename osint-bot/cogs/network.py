@@ -113,8 +113,8 @@ class Network(commands.Cog):
             pf = await http.fetch_json(f"https://stat.ripe.net/data/announced-prefixes/data.json?resource=AS{raw}")
         except Exception as e:
             return await reply.send(interaction, embeds.error_embed("Falha na consulta", f"`{e}`"))
-        holder = ov.get("data", {}).get("holder")
-        prefixes = [p.get("prefix") for p in pf.get("data", {}).get("prefixes", [])]
+        holder = (ov.get("data") or {}).get("holder")
+        prefixes = [p.get("prefix") for p in (pf.get("data") or {}).get("prefixes", [])]
         v4 = [p for p in prefixes if p and ":" not in p]
         v6 = [p for p in prefixes if p and ":" in p]
         e = embeds.info_embed(f"ASN — AS{raw}", holder or "")
@@ -141,6 +141,9 @@ class Network(commands.Cog):
                 if resp.status == 404:
                     return await reply.send(interaction, embeds.error_embed(
                         "Fabricante não encontrado", f"Nenhum fabricante registrado para `{m}`."))
+                if resp.status != 200:
+                    return await reply.send(interaction, embeds.error_embed(
+                        "Consulta indisponível", f"O serviço respondeu {resp.status} (limite de uso). Tente em instantes."))
                 vendor = (await resp.text()).strip()
         except Exception as e:
             return await reply.send(interaction, embeds.error_embed("Falha na consulta", f"`{e}`"))

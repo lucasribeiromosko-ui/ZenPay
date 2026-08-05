@@ -14,7 +14,7 @@ from utils.validators import parse_ip, is_valid_email, clean_domain
 _CVE_RE = re.compile(r"^CVE-\d{4}-\d{4,}$", re.I)
 _MAC_RE = re.compile(r"^([0-9a-f]{2}[:-]){5}[0-9a-f]{2}$", re.I)
 _HEX_RE = re.compile(r"^[0-9a-f]+$", re.I)
-_B64_RE = re.compile(r"^[A-Za-z0-9+/]{8,}={0,2}$")
+_B64_RE = re.compile(r"^[A-Za-z0-9+/]+={0,2}$")
 _IPPORT_RE = re.compile(r"^(\d{1,3}(?:\.\d{1,3}){3}):(\d{1,5})$")
 _HASH_LENS = {32: "MD5", 40: "SHA-1", 56: "SHA-224", 64: "SHA-256", 96: "SHA-384", 128: "SHA-512"}
 
@@ -53,7 +53,8 @@ def _identify(value: str):
     if d:
         return ("🌐", "Domínio / site", [],
                 [f"/whois {d}", f"/dns {d}", f"/subdomains {d}", f"/headers {d}", f"/dork {d}"])
-    if _B64_RE.match(v) and len(v) % 4 == 0:
+    if (_B64_RE.match(v) and len(v) % 4 == 0 and len(v) >= 8
+            and (v.endswith("=") or "+" in v or "/" in v)):
         return "🔐", "Possível texto em Base64", [], [f"/base64 (decode) {v[:40]}"]
     if re.match(r"^@?[\w.\-]{2,40}$", v):
         return "👤", "Possível nome de usuário", [], [f"/username {v.lstrip('@')}"]
