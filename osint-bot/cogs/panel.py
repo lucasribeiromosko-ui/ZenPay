@@ -188,32 +188,39 @@ class Panel(commands.Cog):
     async def tutorial_cmd(self, interaction: discord.Interaction):
         e = embeds.base_embed(
             "📚 Tutorial — como usar o FearSec OSINT",
-            "Bem-vindo! Aqui vai um roteiro rápido para começar suas investigações.",
+            "Bem-vindo! Todas as respostas são **privadas** (só você vê). "
+            "Digite `/` e escolha um comando — o bot pede o dado e faz a busca.",
             config.INFO_COLOR,
         )
-        embeds.add_field(e, "1️⃣ Como funciona",
-            "Digite `/` e escolha um comando. O bot pede o dado (domínio, IP, e-mail…) "
-            "e responde **só para você** (ninguém mais vê).")
-        embeds.add_field(e, "2️⃣ Investigando um site/domínio",
-            "`/whois` → dono e datas\n`/dns` → servidores\n`/subdomains` → subdomínios\n"
-            "`/headers` → tecnologias\n`/webscan` → e-mails e links\n`/dork` → brechas do domínio")
+        embeds.add_field(e, "🧭 NÃO SABE O QUE É? Comece pelo `/whatisthis`",
+            "Achou um valor e não sabe o que fazer? Cole ele no **`/whatisthis`** que o bot "
+            "**identifica** o que é e já **diz qual comando usar**.\n"
+            "Ex.: `/whatisthis 142.248.80.127:5968` → “IP com porta” → sugere `/ip`, `/ipwhois`, `/shodan`.\n"
+            "Funciona com IP, domínio, e-mail, telefone, hash, URL, CVE, ASN, username e mais.")
+        embeds.add_field(e, "1️⃣ Site / domínio",
+            "`/whois` dono e datas · `/dns` servidores · `/subdomains` subdomínios\n"
+            "`/headers` tecnologias · `/webscan` e-mails e links · `/robots` caminhos escondidos\n"
+            "`/wayback` histórico · `/screenshot` print do site · `/urlscan` phishing/scam · `/dork` brechas")
         embeds.add_field(e, "🔎 Achar arquivos públicos (`/buscar`)",
-            "Escolha **o tipo** (Google Drive, PDF, planilha, Trello…) e digite **o título** "
-            "que procura. O bot monta a busca pronta. Ex.: `/buscar` termo `contrato 2024` onde `PDF`.")
-        embeds.add_field(e, "3️⃣ Investigando um IP",
-            "`/ip` → localização e provedor\n`/ipwhois` → dono do bloco + abuse\n"
-            "`/asn` → toda a rede de uma empresa\n`/shodan` → portas expostas (com chave)")
-        embeds.add_field(e, "4️⃣ Investigando uma pessoa/identidade",
-            "`/username` → perfis (rápido)\n`/sherlock` → varredura em 50+ sites\n"
-            "`/instagram` → nome, bio e seguidores de um perfil\n`/email` → relatório do e-mail\n"
-            "`/breach` → apareceu em vazamentos?\n`/phone` → país e operadora")
-        embeds.add_field(e, "5️⃣ Imagens e arquivos",
-            "`/exif` → data, câmera e **GPS** de uma foto\n`/reverseimage` → onde mais a imagem aparece")
+            "Escolha **o tipo** (Google Drive, PDF, planilha, Trello, S3…) e digite **o título**. "
+            "O bot monta a busca pronta. Ex.: `/buscar` termo `contrato 2024` onde `PDF`.")
+        embeds.add_field(e, "2️⃣ IP / rede",
+            "`/ip` localização e provedor · `/ipwhois` dono do bloco + abuse\n"
+            "`/asn` toda a rede de uma empresa · `/mac` fabricante · `/shodan` portas (com chave)")
+        embeds.add_field(e, "3️⃣ Pessoa / identidade",
+            "`/username` perfis (rápido) · `/sherlock` varredura em 50+ sites\n"
+            "`/instagram` nome, bio e seguidores · `/email` relatório completo\n"
+            "`/breach` vazamentos · `/phone` país e operadora")
+        embeds.add_field(e, "4️⃣ Discord (contas e IDs)",
+            "`/discord <ID>` → nome, criação da conta e badges\n"
+            "`/snowflake <ID>` → data de criação de qualquer ID")
+        embeds.add_field(e, "5️⃣ Imagens",
+            "`/exif` data, câmera e **GPS** de uma foto · `/reverseimage` onde mais a imagem aparece")
         embeds.add_field(e, "6️⃣ Segurança",
-            "`/hash` → identifica/quebra hash\n`/cve` → detalhes de uma vulnerabilidade")
+            "`/hash` identifica/quebra hash · `/cve` detalhes de uma vulnerabilidade")
         embeds.add_field(e, "💡 Dica de ouro",
-            "Comece sempre pelo `/painel` para ver tudo organizado. E lembre: cruze "
-            "as evidências — um resultado sozinho raramente prova algo.")
+            "Na dúvida, jogue o valor no **`/whatisthis`** ou abra o **`/painel`**. "
+            "E sempre cruze as evidências — um resultado sozinho raramente prova algo.")
         e.set_footer(text=f"{config.BRAND_NAME} • investigue com ética e autorização")
         await reply.send(interaction, e)
 
