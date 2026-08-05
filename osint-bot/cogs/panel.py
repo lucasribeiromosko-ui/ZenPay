@@ -59,7 +59,7 @@ CATEGORIES = {
         "commands": [
             ("/username fulano", "Procura o @ em 12+ sites públicos."),
             ("/email pessoa@x.com", "Valida formato e checa se recebe e-mail (MX)."),
-            ("/breach pessoa@x.com", "Aparece em vazamentos? (Have I Been Pwned)."),
+            ("/breach pessoa@x.com", "Aparece em vazamentos? (grátis, sem chave)."),
         ],
     },
     "files": {

@@ -84,45 +84,55 @@ class Identity(commands.Cog):
             return (name, url, None)
 
     # -------------------------------------------------------------- BREACH
-    @app_commands.command(name="breach", description="Verifica se um e-mail apareceu em vazamentos (Have I Been Pwned).")
+    @app_commands.command(name="breach", description="Verifica se um e-mail apareceu em vazamentos de dados.")
     @app_commands.describe(email="Ex.: pessoa@exemplo.com")
     async def breach_cmd(self, interaction: discord.Interaction, email: str):
         if not is_valid_email(email):
             return await interaction.response.send_message(
                 embed=embeds.error_embed("E-mail inválido", "Formato de e-mail incorreto."), ephemeral=True)
-        if not config.HIBP_API_KEY:
-            return await interaction.response.send_message(
-                embed=embeds.error_embed(
-                    "HIBP não configurado",
-                    "Adicione `HIBP_API_KEY` no `.env` para verificar vazamentos por e-mail.\n"
-                    "Chave em https://haveibeenpwned.com/API/Key",
-                ),
-                ephemeral=True,
-            )
         # Resposta em modo privado (só quem chamou vê) — dado sensível
         await interaction.response.defer(ephemeral=True)
-        url = f"https://haveibeenpwned.com/api/v3/breachedaccount/{email.strip()}?truncateResponse=false"
-        headers = {"hibp-api-key": config.HIBP_API_KEY}
         try:
-            session = await http.get_session()
-            async with session.get(url, headers=headers) as resp:
-                if resp.status == 404:
-                    return await interaction.followup.send(
-                        embed=embeds.ok_embed("Nenhum vazamento", "Este e-mail não aparece nos vazamentos conhecidos."),
-                        ephemeral=True,
-                    )
-                resp.raise_for_status()
-                data = await resp.json()
+            if config.HIBP_API_KEY:
+                e = await self._breach_hibp(email.strip())
+            else:
+                e = await self._breach_xposedornot(email.strip())
         except Exception as ex:
-            return await interaction.followup.send(
-                embed=embeds.error_embed("Falha no HIBP", f"`{ex}`"), ephemeral=True)
+            e = embeds.error_embed("Falha na consulta", f"`{ex}`")
+        await interaction.followup.send(embed=e, ephemeral=True)
 
-        e = embeds.error_embed(f"⚠️ {len(data)} vazamento(s)", "Este e-mail aparece nos seguintes incidentes:")
+    async def _breach_hibp(self, email: str) -> discord.Embed:
+        """Have I Been Pwned (requer chave paga) — dados mais ricos."""
+        url = f"https://haveibeenpwned.com/api/v3/breachedaccount/{email}?truncateResponse=false"
+        session = await http.get_session()
+        async with session.get(url, headers={"hibp-api-key": config.HIBP_API_KEY}) as resp:
+            if resp.status == 404:
+                return embeds.ok_embed("Nenhum vazamento", "Este e-mail não aparece nos vazamentos conhecidos.")
+            resp.raise_for_status()
+            data = await resp.json()
+        e = embeds.error_embed(f"⚠️ {len(data)} vazamento(s)", "Este e-mail aparece nos seguintes incidentes (HIBP):")
         for b in data[:12]:
             classes = ", ".join(b.get("DataClasses", [])[:6])
             embeds.add_field(e, f"{b.get('Title')} ({b.get('BreachDate')})", classes or "—")
         e.set_footer(text=f"{config.BRAND_NAME} • recomende trocar senha e ativar 2FA.")
-        await interaction.followup.send(embed=e, ephemeral=True)
+        return e
+
+    async def _breach_xposedornot(self, email: str) -> discord.Embed:
+        """XposedOrNot — API pública e gratuita (não precisa de chave)."""
+        url = f"https://api.xposedornot.com/v1/check-email/{email}"
+        session = await http.get_session()
+        async with session.get(url) as resp:
+            if resp.status == 404:
+                return embeds.ok_embed("Nenhum vazamento", "Este e-mail não aparece nos vazamentos conhecidos (XposedOrNot).")
+            resp.raise_for_status()
+            data = await resp.json()
+        breaches = (data.get("breaches") or [[]])[0]  # formato: {"breaches": [[...]]}
+        if not breaches:
+            return embeds.ok_embed("Nenhum vazamento", "Este e-mail não aparece nos vazamentos conhecidos (XposedOrNot).")
+        e = embeds.error_embed(f"⚠️ {len(breaches)} vazamento(s)", "Este e-mail aparece nos seguintes incidentes:")
+        embeds.add_field(e, "Vazamentos", "\n".join(f"• {b}" for b in breaches[:20]))
+        e.set_footer(text=f"{config.BRAND_NAME} • fonte: XposedOrNot (grátis) • troque senha e ative 2FA.")
+        return e
 
     # --------------------------------------------------------------- EMAIL
     @app_commands.command(name="email", description="Valida formato e checa se o domínio do e-mail recebe mensagens (MX).")

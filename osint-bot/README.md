@@ -32,7 +32,7 @@ são de barra (`/`) e respondem com painéis organizados.
 | | `/webscan exemplo.com` | Extrai e-mails, links e metadados da página |
 | 👤 Identidade | `/username fulano` | Procura o `@` em 12+ sites públicos |
 | | `/email pessoa@x.com` | Valida formato + checa MX do domínio |
-| | `/breach pessoa@x.com` | Aparece em vazamentos? *(chave HIBP opcional)* |
+| | `/breach pessoa@x.com` | Aparece em vazamentos? (grátis via XposedOrNot; HIBP se tiver chave) |
 | #️⃣ Hash | `/hash <hash>` | Identifica o tipo e tenta quebrar (dicionário) |
 | 🖼️ Arquivos | `/exif [anexo]` | Câmera, data e GPS de uma foto |
 | ℹ️ Ajuda | `/osint` | Abre o painel com menu de categorias |
