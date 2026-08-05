@@ -23,7 +23,7 @@ logging.basicConfig(
 log = logging.getLogger("osint-bot")
 
 COGS = ["cogs.panel", "cogs.domain", "cogs.network", "cogs.identity",
-        "cogs.files", "cogs.web", "cogs.crypto"]
+        "cogs.files", "cogs.web", "cogs.crypto", "cogs.recon"]
 
 
 class OSINTBot(commands.Bot):

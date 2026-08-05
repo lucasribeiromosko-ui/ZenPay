@@ -46,6 +46,13 @@ CATEGORIES = {
             ("/hash <hash>", "Identifica o tipo e tenta quebrar (senhas fracas)."),
         ],
     },
+    "recon": {
+        "label": "🎯 Recon",
+        "desc": "Reconhecimento passivo (sem tocar no alvo)",
+        "commands": [
+            ("/dork exemplo.com", "Gera buscas Google (dorks) prontas p/ investigação."),
+        ],
+    },
     "identity": {
         "label": "👤 Identidade",
         "desc": "Username em sites, e-mail, vazamentos",
