@@ -97,8 +97,10 @@ class Social(commands.Cog):
         await reply.defer(interaction)
         # 1) API oficial (dados ricos); 2) fallback via metadados da página (og:)
         status, data = await _ig_api(user)
+        diag = f"API={data}"
         if status == "blocked":
             status, data = await _ig_html(user)
+            diag += f" · HTML={data}"
 
         if status == "notfound":
             return await reply.send(interaction, embeds.error_embed(
@@ -108,7 +110,11 @@ class Social(commands.Cog):
                 "O Instagram recusa consultas vindas de **servidores** (o bot roda em "
                 "datacenter). É proteção anti-bot do Instagram, não um erro do bot.")
             embeds.add_field(e, "Ver o perfil direto", f"https://www.instagram.com/{user}/")
-            if not config.IG_SESSIONID:
+            if config.IG_SESSIONID:
+                embeds.add_field(e, "🔎 Diagnóstico (cookie configurado)",
+                    f"`{diag}`\n401 = cookie inválido/expirado • 429 = limite • "
+                    "302/login = cookie não autenticou. Refaça o `sessionid` se persistir.")
+            else:
                 embeds.add_field(e, "🔓 Como fazer funcionar",
                     "Defina a variável **`IG_SESSIONID`** no Railway com o cookie `sessionid` "
                     "da sua conta logada. Aí o bot lê perfis públicos normalmente.")
@@ -170,8 +176,14 @@ def _fmt_int(n):
 
 async def _ig_api(user: str):
     """API oficial web_profile_info. ('ok', normalizado) | 'notfound' | 'blocked'."""
-    url = f"https://i.instagram.com/api/v1/users/web_profile_info/?username={user}"
-    headers = {"x-ig-app-id": "936619743392459", "User-Agent": _UA, "Accept": "application/json"}
+    url = f"https://www.instagram.com/api/v1/users/web_profile_info/?username={user}"
+    headers = {
+        "x-ig-app-id": "936619743392459",
+        "User-Agent": _UA,
+        "Accept": "application/json",
+        "X-Requested-With": "XMLHttpRequest",
+        "Referer": f"https://www.instagram.com/{user}/",
+    }
     if config.IG_SESSIONID:
         headers["Cookie"] = f"sessionid={config.IG_SESSIONID}"
     try:
