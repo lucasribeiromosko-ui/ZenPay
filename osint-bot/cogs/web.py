@@ -4,13 +4,16 @@ e varredura de página (e-mails, links e metadados).
 Todas as URLs passam por uma guarda anti-SSRF (só IP público, http/https).
 """
 import re
+from urllib.parse import urlparse
 
 import discord
 from discord import app_commands
 from discord.ext import commands
 
 from utils import embeds, http
+from utils import reply
 from utils.safeurl import resolve_public_url
+from utils.validators import clean_domain
 
 # Assinaturas simples: cabeçalho/HTML -> tecnologia
 TECH_HINTS = {
@@ -42,10 +45,10 @@ class Web(commands.Cog):
     @app_commands.command(name="headers", description="Cabeçalhos HTTP e tecnologias detectadas de um site.")
     @app_commands.describe(url="Ex.: exemplo.com ou https://exemplo.com")
     async def headers_cmd(self, interaction: discord.Interaction, url: str):
-        await interaction.response.defer()
+        await reply.defer(interaction)
         safe, info = await resolve_public_url(url)
         if not safe:
-            return await interaction.followup.send(embed=embeds.error_embed("URL bloqueada", info))
+            return await reply.send(interaction, embeds.error_embed("URL bloqueada", info))
         try:
             session = await http.get_session()
             async with session.get(safe, allow_redirects=True) as resp:
@@ -54,7 +57,7 @@ class Web(commands.Cog):
                 status = resp.status
                 body = await resp.content.read(60000)  # lê só o começo p/ detectar tech
         except Exception as e:
-            return await interaction.followup.send(embed=embeds.error_embed("Falha ao acessar", f"`{e}`"))
+            return await reply.send(interaction, embeds.error_embed("Falha ao acessar", f"`{e}`"))
 
         html = body.decode("utf-8", "ignore").lower()
         e = embeds.info_embed(f"Headers — {info}", f"HTTP {status} • {final_url}")
@@ -77,22 +80,22 @@ class Web(commands.Cog):
                            "x-frame-options", "x-content-type-options"]
                if any(k.lower() == h for k in headers)]
         embeds.add_field(e, "🛡️ Headers de segurança presentes", f"{len(sec)}/4: " + (", ".join(sec) or "nenhum"))
-        await interaction.followup.send(embed=e)
+        await reply.send(interaction, e)
 
     # ---------------------------------------------------------------- WEBSCAN
     @app_commands.command(name="webscan", description="Extrai e-mails, links e metadados de uma página.")
     @app_commands.describe(url="Ex.: exemplo.com")
     async def webscan_cmd(self, interaction: discord.Interaction, url: str):
-        await interaction.response.defer()
+        await reply.defer(interaction)
         safe, info = await resolve_public_url(url)
         if not safe:
-            return await interaction.followup.send(embed=embeds.error_embed("URL bloqueada", info))
+            return await reply.send(interaction, embeds.error_embed("URL bloqueada", info))
         try:
             session = await http.get_session()
             async with session.get(safe, allow_redirects=True) as resp:
                 raw = await resp.content.read(400000)
         except Exception as e:
-            return await interaction.followup.send(embed=embeds.error_embed("Falha ao acessar", f"`{e}`"))
+            return await reply.send(interaction, embeds.error_embed("Falha ao acessar", f"`{e}`"))
 
         text = raw.decode("utf-8", "ignore")
         emails = sorted(set(EMAIL_RE.findall(text)))
@@ -112,7 +115,65 @@ class Web(commands.Cog):
         ext_links = [l for l in links if info not in l][:15]
         embeds.add_field(e, f"🔗 Links externos ({len(ext_links)} de {len(links)})",
                          "\n".join(ext_links) if ext_links else "—")
-        await interaction.followup.send(embed=e)
+        await reply.send(interaction, e)
+
+
+    # ---------------------------------------------------------------- ROBOTS
+    @app_commands.command(name="robots", description="Lê o robots.txt e sitemaps de um site (revela caminhos escondidos).")
+    @app_commands.describe(url="Ex.: exemplo.com")
+    async def robots_cmd(self, interaction: discord.Interaction, url: str):
+        await reply.defer(interaction)
+        safe, info = await resolve_public_url(url)
+        if not safe:
+            return await reply.send(interaction, embeds.error_embed("URL bloqueada", info))
+        p = urlparse(safe)
+        base = f"{p.scheme}://{p.hostname}"
+        try:
+            session = await http.get_session()
+            async with session.get(base + "/robots.txt", allow_redirects=True) as resp:
+                status = resp.status
+                text = (await resp.text())[:8000] if status == 200 else ""
+        except Exception as e:
+            return await reply.send(interaction, embeds.error_embed("Falha ao acessar", f"`{e}`"))
+        e = embeds.info_embed(f"robots.txt — {info}")
+        if status != 200 or not text.strip():
+            embeds.add_field(e, "Resultado", f"Sem robots.txt acessível (HTTP {status}).")
+            return await reply.send(interaction, e)
+        disallow, sitemaps = [], []
+        for line in text.splitlines():
+            low = line.lower().strip()
+            if low.startswith("disallow:"):
+                v = line.split(":", 1)[1].strip()
+                if v:
+                    disallow.append(v)
+            elif low.startswith("sitemap:"):
+                sitemaps.append(line.split(":", 1)[1].strip())
+        embeds.add_field(e, f"🚫 Disallow ({len(disallow)})", "\n".join(disallow[:20]) or "nenhum")
+        if sitemaps:
+            embeds.add_field(e, "🗺️ Sitemaps", "\n".join(sitemaps[:5]))
+        await reply.send(interaction, e)
+
+    # --------------------------------------------------------------- WAYBACK
+    @app_commands.command(name="wayback", description="Histórico de um site no Wayback Machine (archive.org).")
+    @app_commands.describe(url="Ex.: exemplo.com")
+    async def wayback_cmd(self, interaction: discord.Interaction, url: str):
+        await reply.defer(interaction)
+        domain = clean_domain(url) or url.strip()
+        try:
+            avail = await http.fetch_json(f"https://archive.org/wayback/available?url={domain}")
+        except Exception as e:
+            return await reply.send(interaction, embeds.error_embed("Falha na consulta", f"`{e}`"))
+        snap = (avail.get("archived_snapshots") or {}).get("closest") or {}
+        e = embeds.info_embed(f"Wayback Machine — {domain}")
+        if snap:
+            ts = snap.get("timestamp", "")
+            pretty = f"{ts[:4]}-{ts[4:6]}-{ts[6:8]}" if len(ts) >= 8 else ts
+            embeds.add_field(e, "Snapshot mais recente", f"[{pretty}]({snap.get('url')})")
+            embeds.add_field(e, "Status HTTP no arquivo", snap.get("status"), inline=True)
+        else:
+            embeds.add_field(e, "Resultado", "Nenhum snapshot arquivado encontrado.")
+        embeds.add_field(e, "📅 Ver todos os capturas", f"[Calendário completo](https://web.archive.org/web/*/{domain})")
+        await reply.send(interaction, e)
 
 
 def _detect_tech(headers: dict, html: str):

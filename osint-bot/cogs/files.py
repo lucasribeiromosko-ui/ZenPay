@@ -1,5 +1,6 @@
-"""Ferramenta de arquivos: extração de metadados EXIF de imagens."""
+"""Ferramenta de arquivos: metadados EXIF e busca reversa de imagens."""
 import io
+from urllib.parse import quote_plus
 
 import discord
 from discord import app_commands
@@ -9,6 +10,7 @@ from PIL import Image, ExifTags
 
 import config
 from utils import embeds
+from utils import reply
 
 GPS_TAGS = {v: k for k, v in ExifTags.GPSTAGS.items()}
 MAX_BYTES = 15 * 1024 * 1024  # 15 MB
@@ -24,20 +26,17 @@ class Files(commands.Cog):
     @app_commands.describe(imagem="Anexe uma imagem (JPG/TIFF costumam ter EXIF).")
     async def exif_cmd(self, interaction: discord.Interaction, imagem: discord.Attachment):
         if imagem.size > MAX_BYTES:
-            return await interaction.response.send_message(
-                embed=embeds.error_embed("Arquivo grande demais", "Limite de 15 MB."), ephemeral=True)
+            return await reply.send(interaction, embeds.error_embed("Arquivo grande demais", "Limite de 15 MB."))
         if not (imagem.content_type or "").startswith("image/"):
-            return await interaction.response.send_message(
-                embed=embeds.error_embed("Não é imagem", "Anexe um arquivo de imagem."), ephemeral=True)
+            return await reply.send(interaction, embeds.error_embed("Não é imagem", "Anexe um arquivo de imagem."))
 
-        await interaction.response.defer()
+        await reply.defer(interaction)
         raw = await imagem.read()
         try:
             img = Image.open(io.BytesIO(raw))
             exif = img._getexif()
         except Exception as ex:
-            return await interaction.followup.send(
-                embed=embeds.error_embed("Falha ao ler", f"`{ex}`"))
+            return await reply.send(interaction, embeds.error_embed("Falha ao ler", f"`{ex}`"))
 
         e = embeds.info_embed(f"EXIF — {imagem.filename}")
         embeds.add_field(e, "Dimensões", f"{img.width} × {img.height}px", inline=True)
@@ -46,7 +45,7 @@ class Files(commands.Cog):
         if not exif:
             embeds.add_field(e, "Metadados", "Nenhum EXIF encontrado (removido ou não suportado).")
             e.set_footer(text=f"{config.BRAND_NAME} • sem EXIF ≠ sem pistas; veja formato/tamanho.")
-            return await interaction.followup.send(embed=e)
+            return await reply.send(interaction, e)
 
         tags = {ExifTags.TAGS.get(k, k): v for k, v in exif.items()}
         for label, key in [
@@ -63,7 +62,36 @@ class Files(commands.Cog):
             lat, lon = coords
             maps = f"https://www.google.com/maps?q={lat},{lon}"
             embeds.add_field(e, "📍 GPS", f"`{lat:.6f}, {lon:.6f}`\n[Ver no mapa]({maps})")
-        await interaction.followup.send(embed=e)
+        await reply.send(interaction, e)
+
+
+    # -------------------------------------------------------- REVERSE IMAGE
+    @app_commands.command(name="reverseimage", description="Gera links de busca reversa de imagem (Google, Yandex, Bing, TinEye).")
+    @app_commands.describe(imagem="Anexe uma imagem", url="ou cole a URL de uma imagem pública")
+    async def reverseimage_cmd(self, interaction: discord.Interaction,
+                               imagem: discord.Attachment = None, url: str = None):
+        img_url = None
+        if imagem is not None:
+            if not (imagem.content_type or "").startswith("image/"):
+                return await reply.send(interaction, embeds.error_embed("Não é imagem", "Anexe um arquivo de imagem."))
+            img_url = imagem.url
+        elif url:
+            img_url = url.strip()
+        if not img_url:
+            return await reply.send(interaction, embeds.error_embed(
+                "Faltou a imagem", "Anexe uma imagem **ou** cole a URL de uma imagem pública."))
+        q = quote_plus(img_url)
+        engines = {
+            "🔍 Google Lens": f"https://lens.google.com/uploadbyurl?url={q}",
+            "🟡 Yandex": f"https://yandex.com/images/search?rpt=imageview&url={q}",
+            "🔵 Bing": f"https://www.bing.com/images/search?view=detailv2&iss=sbi&q=imgurl:{q}",
+            "👁️ TinEye": f"https://www.tineye.com/search?url={q}",
+        }
+        e = embeds.info_embed("Busca reversa de imagem", "Clique para descobrir onde a imagem aparece na web:")
+        for name, link in engines.items():
+            embeds.add_field(e, name, f"[abrir busca]({link})", inline=True)
+        e.set_footer(text=f"{config.BRAND_NAME} • a imagem precisa estar acessível publicamente pela URL.")
+        await reply.send(interaction, e)
 
 
 def _extract_gps(gps_info):

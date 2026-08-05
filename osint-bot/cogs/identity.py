@@ -12,9 +12,12 @@ from discord import app_commands
 from discord.ext import commands
 
 import dns.asyncresolver
+import phonenumbers
+from phonenumbers import geocoder, carrier, timezone as ph_tz, number_type, PhoneNumberType
 
 import config
 from utils import embeds, http
+from utils import reply
 from utils.validators import is_valid_email
 
 # Sites com padrão de URL de perfil público previsível.
@@ -47,11 +50,8 @@ class Identity(commands.Cog):
     async def username_cmd(self, interaction: discord.Interaction, username: str):
         uname = username.strip().lstrip("@")
         if not uname or len(uname) > 40 or "/" in uname or " " in uname:
-            return await interaction.response.send_message(
-                embed=embeds.error_embed("Username inválido", "Use apenas o nome, sem espaços ou `/`."),
-                ephemeral=True,
-            )
-        await interaction.response.defer()
+            return await reply.send(interaction, embeds.error_embed("Username inválido", "Use apenas o nome, sem espaços ou `/`."))
+        await reply.defer(interaction)
 
         results = await asyncio.gather(
             *[self._check_site(name, tmpl, uname) for name, tmpl in SITES.items()]
@@ -67,7 +67,7 @@ class Identity(commands.Cog):
         if not found and not maybe:
             embeds.add_field(e, "Resultado", "Nenhum perfil público localizado com esse nome.")
         e.set_footer(text=f"{config.BRAND_NAME} • perfil existir ≠ ser a mesma pessoa. Confirme sempre.")
-        await interaction.followup.send(embed=e)
+        await reply.send(interaction, e)
 
     async def _check_site(self, name: str, template: str, username: str):
         """Retorna (nome, url, ok) onde ok=True existe, False não, None incerto."""
@@ -88,10 +88,9 @@ class Identity(commands.Cog):
     @app_commands.describe(email="Ex.: pessoa@exemplo.com")
     async def breach_cmd(self, interaction: discord.Interaction, email: str):
         if not is_valid_email(email):
-            return await interaction.response.send_message(
-                embed=embeds.error_embed("E-mail inválido", "Formato de e-mail incorreto."), ephemeral=True)
+            return await reply.send(interaction, embeds.error_embed("E-mail inválido", "Formato de e-mail incorreto."))
         # Resposta em modo privado (só quem chamou vê) — dado sensível
-        await interaction.response.defer(ephemeral=True)
+        await reply.defer(interaction)
         try:
             if config.HIBP_API_KEY:
                 e = await self._breach_hibp(email.strip())
@@ -99,7 +98,7 @@ class Identity(commands.Cog):
                 e = await self._breach_xposedornot(email.strip())
         except Exception as ex:
             e = embeds.error_embed("Falha na consulta", f"`{ex}`")
-        await interaction.followup.send(embed=e, ephemeral=True)
+        await reply.send(interaction, e)
 
     async def _breach_hibp(self, email: str) -> discord.Embed:
         """Have I Been Pwned (requer chave paga) — dados mais ricos."""
@@ -139,9 +138,8 @@ class Identity(commands.Cog):
     @app_commands.describe(email="Ex.: pessoa@exemplo.com")
     async def email_cmd(self, interaction: discord.Interaction, email: str):
         if not is_valid_email(email):
-            return await interaction.response.send_message(
-                embed=embeds.error_embed("E-mail inválido", "Formato incorreto."), ephemeral=True)
-        await interaction.response.defer()
+            return await reply.send(interaction, embeds.error_embed("E-mail inválido", "Formato incorreto."))
+        await reply.defer(interaction)
         domain = email.strip().split("@")[1]
         e = embeds.info_embed(f"E-mail — {email.strip()}")
         embeds.add_field(e, "Formato", "✅ válido", inline=True)
@@ -154,7 +152,33 @@ class Identity(commands.Cog):
             embeds.add_field(e, "Servidores MX", "\n".join(mx[:6]))
         except Exception:
             embeds.add_field(e, "Domínio aceita e-mail (MX)", "❌ nenhum registro MX", inline=True)
-        await interaction.followup.send(embed=e)
+        await reply.send(interaction, e)
+
+
+    # --------------------------------------------------------------- PHONE
+    @app_commands.command(name="phone", description="Valida um telefone: país, operadora e tipo (não identifica o dono).")
+    @app_commands.describe(numero="Formato internacional, ex.: +5511999998888")
+    async def phone_cmd(self, interaction: discord.Interaction, numero: str):
+        try:
+            num = phonenumbers.parse(numero.strip(), None)
+        except Exception:
+            return await reply.send(interaction, embeds.error_embed(
+                "Número inválido", "Use o formato internacional com `+DDI`, ex.: `+5511999998888`."))
+        valid = phonenumbers.is_valid_number(num)
+        types = {
+            PhoneNumberType.MOBILE: "Celular", PhoneNumberType.FIXED_LINE: "Fixo",
+            PhoneNumberType.VOIP: "VoIP", PhoneNumberType.FIXED_LINE_OR_MOBILE: "Fixo/Celular",
+            PhoneNumberType.TOLL_FREE: "0800", PhoneNumberType.PREMIUM_RATE: "Tarifado",
+        }
+        e = embeds.info_embed(f"Telefone — +{num.country_code} {num.national_number}")
+        embeds.add_field(e, "Válido", "✅ sim" if valid else "❌ não", inline=True)
+        embeds.add_field(e, "País/Região", geocoder.description_for_number(num, "pt") or "—", inline=True)
+        embeds.add_field(e, "Operadora", carrier.name_for_number(num, "pt") or "—", inline=True)
+        embeds.add_field(e, "Tipo", types.get(number_type(num), "outro"), inline=True)
+        tzs = ph_tz.time_zones_for_number(num)
+        embeds.add_field(e, "Fuso horário", ", ".join(tzs) if tzs else "—", inline=True)
+        e.set_footer(text=f"{config.BRAND_NAME} • metadados públicos do número; NÃO revela o dono.")
+        await reply.send(interaction, e)
 
 
 async def setup(bot):

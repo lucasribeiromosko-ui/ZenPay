@@ -12,6 +12,7 @@ from discord.ext import commands
 
 import config
 from utils import embeds
+from utils import reply
 
 # tipo -> (tamanho hex, função hashlib)
 HASH_TYPES = {
@@ -47,10 +48,7 @@ class Crypto(commands.Cog):
     async def hash_cmd(self, interaction: discord.Interaction, valor: str, palavra: str = None):
         h = valor.strip().lower()
         if not HEX_RE.match(h):
-            return await interaction.response.send_message(
-                embed=embeds.error_embed("Não parece um hash hex", "Cole apenas os caracteres 0-9 a-f."),
-                ephemeral=True,
-            )
+            return await reply.send(interaction, embeds.error_embed("Não parece um hash hex", "Cole apenas os caracteres 0-9 a-f."))
         candidates = [name for name, (length, _) in HASH_TYPES.items() if length == len(h)]
         e = embeds.info_embed(f"Hash ({len(h)} chars)")
         embeds.add_field(e, "Tipo(s) provável(is)", ", ".join(candidates) if candidates else "desconhecido")
@@ -63,10 +61,10 @@ class Crypto(commands.Cog):
                 embeds.add_field(e, "✅ Confere!", f"`{palavra}` gera este hash ({', '.join(matches)}).")
             else:
                 embeds.add_field(e, "❌ Não confere", f"`{palavra}` não gera este hash.")
-            return await interaction.response.send_message(embed=e)
+            return await reply.send(interaction, e)
 
         # 2) Tenta quebrar com a wordlist embutida
-        await interaction.response.defer()
+        await reply.defer(interaction)
         cracked = None
         for name in (candidates or HASH_TYPES.keys()):
             for pw in COMMON_PASSWORDS:
@@ -84,7 +82,7 @@ class Crypto(commands.Cog):
             embeds.add_field(e, "🔒 Não quebrado",
                              "Não está na wordlist de senhas comuns embutida.\n"
                              "Use `/hash valor: palavra:` para testar palavras específicas.")
-        await interaction.followup.send(embed=e)
+        await reply.send(interaction, e)
 
 
 def _digest(hash_name: str, text: str) -> str:

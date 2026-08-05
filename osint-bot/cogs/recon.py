@@ -8,6 +8,7 @@ from discord import app_commands
 from discord.ext import commands
 
 from utils import embeds
+from utils import reply
 from utils.validators import clean_domain
 
 # Cada dork: (rótulo, query com {d} = domínio)
@@ -36,10 +37,7 @@ class Recon(commands.Cog):
     async def dork_cmd(self, interaction: discord.Interaction, dominio: str):
         domain = clean_domain(dominio)
         if not domain:
-            return await interaction.response.send_message(
-                embed=embeds.error_embed("Domínio inválido", f"`{dominio}` não parece um domínio válido."),
-                ephemeral=True,
-            )
+            return await reply.send(interaction, embeds.error_embed("Domínio inválido", f"`{dominio}` não parece um domínio válido."))
         e = embeds.info_embed(
             f"Google Dorks — {domain}",
             "Buscas prontas para reconhecimento passivo. Clique para abrir no Google.",
@@ -49,7 +47,7 @@ class Recon(commands.Cog):
             url = "https://www.google.com/search?q=" + quote_plus(query)
             embeds.add_field(e, label, f"[`{query}`]({url})")
         e.set_footer(text="FearSec OSINT • reconhecimento passivo: só consulta o índice público do Google.")
-        await interaction.response.send_message(embed=e)
+        await reply.send(interaction, e)
 
 
 async def setup(bot):

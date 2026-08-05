@@ -16,30 +16,43 @@ são de barra (`/`) e respondem com painéis organizados.
 
 ---
 
-## 🧰 Ferramentas incluídas
+> 🔒 **Privacidade:** todas as respostas são **privadas (ephemeral)** — só quem
+> executou o comando vê o resultado. Nada aparece para o resto do servidor.
+
+## 🧰 Ferramentas incluídas (28 comandos)
 
 | Categoria | Comando | O que faz |
 |-----------|---------|-----------|
-| 🌐 Domínios | `/whois exemplo.com` | Quem registrou, quando e onde |
+| 🌐 Domínio & DNS | `/whois exemplo.com` | Quem registrou, quando e onde |
 | | `/dns exemplo.com` | Registros A, AAAA, MX, NS, TXT, CNAME, SOA |
-| | `/subdomains exemplo.com` | Descobre subdomínios (Certificate Transparency) |
-| | `/tls exemplo.com` | Detalhes do certificado SSL/TLS |
-| 📡 Rede/IP | `/ip 8.8.8.8` | País, provedor, ASN, sinais de VPN/hosting |
-| | `/reversedns 8.8.8.8` | Nome (PTR) de um IP, ou IPs de um domínio |
-| | `/ipwhois 8.8.8.8` | Dono do bloco de IP e contato de abuse (RDAP) |
-| | `/shodan 8.8.8.8` | Portas e serviços expostos *(chave opcional)* |
-| 🕸️ Web | `/headers exemplo.com` | Cabeçalhos HTTP, tecnologias e headers de segurança |
-| | `/webscan exemplo.com` | Extrai e-mails, links e metadados da página |
-| 👤 Identidade | `/username fulano` | Procura o `@` em 12+ sites públicos |
-| | `/email pessoa@x.com` | Valida formato + checa MX do domínio |
-| | `/breach pessoa@x.com` | Aparece em vazamentos? (grátis via XposedOrNot; HIBP se tiver chave) |
-| #️⃣ Hash | `/hash <hash>` | Identifica o tipo e tenta quebrar (dicionário) |
+| | `/subdomains exemplo.com` | Subdomínios (Certificate Transparency) |
+| | `/tls exemplo.com` | Certificado SSL/TLS |
+| 📡 IP & Rede | `/ip 8.8.8.8` | País, provedor, ASN, VPN/hosting |
+| | `/ipwhois 8.8.8.8` | Dono do bloco de IP + contato de abuse (RDAP) |
+| | `/reversedns 8.8.8.8` | PTR de um IP, ou IPs de um domínio |
+| | `/asn AS15169` | Prefixos de IP e organização de um ASN (RIPEstat) |
+| | `/shodan 8.8.8.8` | Portas/serviços expostos *(chave opcional)* |
+| 🕸️ Web & Sites | `/headers exemplo.com` | Cabeçalhos HTTP, tecnologias, segurança |
+| | `/webscan exemplo.com` | Extrai e-mails, links e metadados |
+| | `/robots exemplo.com` | robots.txt + sitemaps (caminhos escondidos) |
+| | `/wayback exemplo.com` | Histórico no Wayback Machine (archive.org) |
+| 👤 Pessoas | `/username fulano` | Procura o `@` em 12+ sites públicos |
+| | `/email pessoa@x.com` | Valida formato + checa MX |
+| | `/breach pessoa@x.com` | Vazamentos (grátis via XposedOrNot; HIBP se tiver chave) |
+| | `/phone +5511999998888` | Valida telefone: país, operadora, tipo |
 | 🖼️ Arquivos | `/exif [anexo]` | Câmera, data e GPS de uma foto |
-| ℹ️ Ajuda | `/osint` | Abre o painel com menu de categorias |
+| | `/reverseimage [anexo/url]` | Busca reversa (Google, Yandex, Bing, TinEye) |
+| 🔐 Segurança | `/hash <hash>` | Identifica e quebra hash (MD5/SHA) |
+| | `/cve CVE-2021-44228` | Detalhes de uma vulnerabilidade (NVD) |
+| 🧰 Ferramentas | `/base64 encode/decode` | Codifica/decodifica Base64 |
+| | `/useragent <ua>` | Analisa uma string de User-Agent |
+| | `/dork exemplo.com` | Gera Google Dorks para investigação |
+| ℹ️ Ajuda | `/painel` `/osint` | Menu interativo por categoria |
 | | `/ajuda` | Lista rápida de todos os comandos |
+| | `/tutorial` | Guia passo a passo para começar |
 
-Nenhuma chave de API é obrigatória — o bot funciona "de fábrica". `/shodan` e
-`/breach` só pedem uma chave gratuita se você quiser usá-los.
+Nenhuma chave de API é obrigatória — o bot funciona "de fábrica". Só o `/shodan`
+pede uma chave gratuita se você quiser usá-lo.
 
 ---
 

@@ -8,6 +8,7 @@ from discord.ext import commands
 
 import config
 from utils import embeds, http
+from utils import reply
 from utils.validators import parse_ip, is_public_ip, clean_domain
 
 
@@ -22,23 +23,16 @@ class Network(commands.Cog):
     @app_commands.describe(ip="Ex.: 8.8.8.8")
     async def ip_cmd(self, interaction: discord.Interaction, ip: str):
         if not is_public_ip(ip):
-            return await interaction.response.send_message(
-                embed=embeds.error_embed("IP inválido", "Informe um endereço IP **público** válido."),
-                ephemeral=True,
-            )
-        await interaction.response.defer()
+            return await reply.send(interaction, embeds.error_embed("IP inválido", "Informe um endereço IP **público** válido."))
+        await reply.defer(interaction)
         try:
             # ip-api.com — gratuito, sem chave (uso não-comercial)
             fields = "status,message,query,country,regionName,city,isp,org,as,reverse,proxy,hosting"
             data = await http.fetch_json(f"http://ip-api.com/json/{ip.strip()}?fields={fields}")
         except Exception as e:
-            return await interaction.followup.send(
-                embed=embeds.error_embed("Falha na consulta", f"`{e}`")
-            )
+            return await reply.send(interaction, embeds.error_embed("Falha na consulta", f"`{e}`"))
         if data.get("status") != "success":
-            return await interaction.followup.send(
-                embed=embeds.error_embed("Sem resultado", data.get("message", "IP não encontrado."))
-            )
+            return await reply.send(interaction, embeds.error_embed("Sem resultado", data.get("message", "IP não encontrado.")))
 
         e = embeds.info_embed(f"IP — {data.get('query')}")
         loc = ", ".join(filter(None, [data.get("city"), data.get("regionName"), data.get("country")]))
@@ -54,13 +48,13 @@ class Network(commands.Cog):
             flags.append("🖥️ hosting/datacenter")
         if flags:
             embeds.add_field(e, "Sinais", " • ".join(flags))
-        await interaction.followup.send(embed=e)
+        await reply.send(interaction, e)
 
     # -------------------------------------------------------- REVERSE DNS
     @app_commands.command(name="reversedns", description="Resolve o nome (PTR) de um IP e vice-versa.")
     @app_commands.describe(alvo="Um IP (8.8.8.8) ou um domínio (exemplo.com)")
     async def reversedns_cmd(self, interaction: discord.Interaction, alvo: str):
-        await interaction.response.defer()
+        await reply.defer(interaction)
         alvo = alvo.strip()
         e = embeds.info_embed(f"Reverse DNS — {alvo}")
         try:
@@ -72,30 +66,26 @@ class Network(commands.Cog):
             else:
                 domain = clean_domain(alvo)
                 if not domain:
-                    return await interaction.followup.send(
-                        embed=embeds.error_embed("Entrada inválida", "Informe um IP ou domínio válido."))
+                    return await reply.send(interaction, embeds.error_embed("Entrada inválida", "Informe um IP ou domínio válido."))
                 infos = await asyncio.to_thread(socket.getaddrinfo, domain, None)
                 ips = sorted({i[4][0] for i in infos})
                 embeds.add_field(e, "IPs resolvidos", "\n".join(ips))
         except Exception as ex:
-            return await interaction.followup.send(
-                embed=embeds.error_embed("Sem resultado", f"Não foi possível resolver `{alvo}`.\n`{ex}`"))
-        await interaction.followup.send(embed=e)
+            return await reply.send(interaction, embeds.error_embed("Sem resultado", f"Não foi possível resolver `{alvo}`.\n`{ex}`"))
+        await reply.send(interaction, e)
 
     # --------------------------------------------------------------- IPWHOIS
     @app_commands.command(name="ipwhois", description="Dono do bloco de IP (RDAP): organização, rede e abuse.")
     @app_commands.describe(ip="Ex.: 8.8.8.8")
     async def ipwhois_cmd(self, interaction: discord.Interaction, ip: str):
         if not is_public_ip(ip):
-            return await interaction.response.send_message(
-                embed=embeds.error_embed("IP inválido", "Informe um IP público válido."), ephemeral=True)
-        await interaction.response.defer()
+            return await reply.send(interaction, embeds.error_embed("IP inválido", "Informe um IP público válido."))
+        await reply.defer(interaction)
         try:
             # RDAP oficial via redirecionador da IANA (cobre ARIN/RIPE/LACNIC/APNIC)
             data = await http.fetch_json(f"https://rdap.org/ip/{ip.strip()}")
         except Exception as e:
-            return await interaction.followup.send(
-                embed=embeds.error_embed("Falha no RDAP", f"`{e}`"))
+            return await reply.send(interaction, embeds.error_embed("Falha no RDAP", f"`{e}`"))
 
         e = embeds.info_embed(f"IP WHOIS (RDAP) — {ip.strip()}")
         embeds.add_field(e, "Nome da rede", data.get("name"))
@@ -107,31 +97,52 @@ class Network(commands.Cog):
             embeds.add_field(e, "Organização", org)
         if abuse:
             embeds.add_field(e, "📮 Contato de abuse", abuse)
-        await interaction.followup.send(embed=e)
+        await reply.send(interaction, e)
+
+    # ------------------------------------------------------------------- ASN
+    @app_commands.command(name="asn", description="Prefixos de IP e organização de um ASN.")
+    @app_commands.describe(asn="Ex.: AS15169 ou 15169")
+    async def asn_cmd(self, interaction: discord.Interaction, asn: str):
+        raw = asn.strip().upper().replace("AS", "")
+        if not raw.isdigit():
+            return await reply.send(interaction, embeds.error_embed("ASN inválido", "Use `AS15169` ou `15169`."))
+        await reply.defer(interaction)
+        try:
+            ov = await http.fetch_json(f"https://stat.ripe.net/data/as-overview/data.json?resource=AS{raw}")
+            pf = await http.fetch_json(f"https://stat.ripe.net/data/announced-prefixes/data.json?resource=AS{raw}")
+        except Exception as e:
+            return await reply.send(interaction, embeds.error_embed("Falha na consulta", f"`{e}`"))
+        holder = ov.get("data", {}).get("holder")
+        prefixes = [p.get("prefix") for p in pf.get("data", {}).get("prefixes", [])]
+        v4 = [p for p in prefixes if p and ":" not in p]
+        v6 = [p for p in prefixes if p and ":" in p]
+        e = embeds.info_embed(f"ASN — AS{raw}", holder or "")
+        embeds.add_field(e, "Organização", holder)
+        embeds.add_field(e, f"Prefixos IPv4 ({len(v4)})", "\n".join(v4[:25]) or "—")
+        if v6:
+            embeds.add_field(e, f"Prefixos IPv6 ({len(v6)})", "\n".join(v6[:10]))
+        if len(v4) > 25:
+            embeds.add_field(e, "Obs.", f"+{len(v4) - 25} prefixos IPv4 não exibidos.")
+        await reply.send(interaction, e)
 
     # ---------------------------------------------------------------- SHODAN
     @app_commands.command(name="shodan", description="Portas e serviços expostos de um IP (requer chave Shodan).")
     @app_commands.describe(ip="Ex.: 8.8.8.8")
     async def shodan_cmd(self, interaction: discord.Interaction, ip: str):
         if not config.SHODAN_API_KEY:
-            return await interaction.response.send_message(
-                embed=embeds.error_embed(
+            return await reply.send(interaction, embeds.error_embed(
                     "Shodan não configurado",
                     "Adicione `SHODAN_API_KEY` no `.env` para usar este comando.\n"
                     "Crie uma chave grátis em https://account.shodan.io",
-                ),
-                ephemeral=True,
-            )
+                ))
         if not is_public_ip(ip):
-            return await interaction.response.send_message(
-                embed=embeds.error_embed("IP inválido", "Informe um IP público válido."), ephemeral=True)
-        await interaction.response.defer()
+            return await reply.send(interaction, embeds.error_embed("IP inválido", "Informe um IP público válido."))
+        await reply.defer(interaction)
         try:
             data = await http.fetch_json(
                 f"https://api.shodan.io/shodan/host/{ip.strip()}?key={config.SHODAN_API_KEY}")
         except Exception as e:
-            return await interaction.followup.send(
-                embed=embeds.error_embed("Falha no Shodan", f"`{e}` (IP pode não estar indexado)."))
+            return await reply.send(interaction, embeds.error_embed("Falha no Shodan", f"`{e}` (IP pode não estar indexado)."))
 
         e = embeds.info_embed(f"Shodan — {data.get('ip_str', ip)}")
         embeds.add_field(e, "Organização", data.get("org"), inline=True)
@@ -144,7 +155,7 @@ class Network(commands.Cog):
         vulns = data.get("vulns", [])
         if vulns:
             embeds.add_field(e, "⚠️ CVEs relatadas", ", ".join(sorted(vulns)[:15]))
-        await interaction.followup.send(embed=e)
+        await reply.send(interaction, e)
 
 
 def _rdap_entities(entities):

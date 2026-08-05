@@ -12,6 +12,7 @@ import dns.asyncresolver
 import whois
 
 from utils import embeds, http
+from utils import reply
 from utils.validators import clean_domain
 
 DNS_RECORDS = ["A", "AAAA", "MX", "NS", "TXT", "CNAME", "SOA"]
@@ -29,18 +30,13 @@ class Domain(commands.Cog):
     async def whois_cmd(self, interaction: discord.Interaction, dominio: str):
         domain = clean_domain(dominio)
         if not domain:
-            return await interaction.response.send_message(
-                embed=embeds.error_embed("Domínio inválido", f"`{dominio}` não parece um domínio válido."),
-                ephemeral=True,
-            )
-        await interaction.response.defer()
+            return await reply.send(interaction, embeds.error_embed("Domínio inválido", f"`{dominio}` não parece um domínio válido."))
+        await reply.defer(interaction)
         try:
             # python-whois é síncrono → roda em thread para não travar o bot
             data = await asyncio.to_thread(whois.whois, domain)
         except Exception as e:
-            return await interaction.followup.send(
-                embed=embeds.error_embed("Falha no WHOIS", f"Não consegui consultar `{domain}`.\n`{e}`")
-            )
+            return await reply.send(interaction, embeds.error_embed("Falha no WHOIS", f"Não consegui consultar `{domain}`.\n`{e}`"))
 
         e = embeds.info_embed(f"WHOIS — {domain}")
         embeds.add_field(e, "Registrar", _first(data.get("registrar")))
@@ -52,7 +48,7 @@ class Domain(commands.Cog):
         if ns:
             ns_list = sorted({str(n).lower() for n in ns}) if isinstance(ns, (list, set)) else [str(ns)]
             embeds.add_field(e, "Name servers", "\n".join(ns_list[:8]))
-        await interaction.followup.send(embed=e)
+        await reply.send(interaction, e)
 
     # ------------------------------------------------------------------ DNS
     @app_commands.command(name="dns", description="Consulta registros DNS (A, AAAA, MX, NS, TXT, CNAME, SOA).")
@@ -60,11 +56,8 @@ class Domain(commands.Cog):
     async def dns_cmd(self, interaction: discord.Interaction, dominio: str):
         domain = clean_domain(dominio)
         if not domain:
-            return await interaction.response.send_message(
-                embed=embeds.error_embed("Domínio inválido", f"`{dominio}` não parece um domínio válido."),
-                ephemeral=True,
-            )
-        await interaction.response.defer()
+            return await reply.send(interaction, embeds.error_embed("Domínio inválido", f"`{dominio}` não parece um domínio válido."))
+        await reply.defer(interaction)
 
         resolver = dns.asyncresolver.Resolver()
         resolver.lifetime = 8.0
@@ -81,7 +74,7 @@ class Domain(commands.Cog):
                 continue  # sem esse tipo de registro
         if not found_any:
             e = embeds.error_embed(f"DNS — {domain}", "Nenhum registro encontrado (domínio pode não existir).")
-        await interaction.followup.send(embed=e)
+        await reply.send(interaction, e)
 
     # ----------------------------------------------------------- SUBDOMAINS
     @app_commands.command(name="subdomains", description="Descobre subdomínios via Certificate Transparency (crt.sh).")
@@ -89,17 +82,12 @@ class Domain(commands.Cog):
     async def subdomains_cmd(self, interaction: discord.Interaction, dominio: str):
         domain = clean_domain(dominio)
         if not domain:
-            return await interaction.response.send_message(
-                embed=embeds.error_embed("Domínio inválido", f"`{dominio}` não parece um domínio válido."),
-                ephemeral=True,
-            )
-        await interaction.response.defer()
+            return await reply.send(interaction, embeds.error_embed("Domínio inválido", f"`{dominio}` não parece um domínio válido."))
+        await reply.defer(interaction)
         try:
             data = await http.fetch_json(f"https://crt.sh/?q=%25.{domain}&output=json")
         except Exception as e:
-            return await interaction.followup.send(
-                embed=embeds.error_embed("Falha na consulta", f"crt.sh não respondeu.\n`{e}`")
-            )
+            return await reply.send(interaction, embeds.error_embed("Falha na consulta", f"crt.sh não respondeu.\n`{e}`"))
 
         subs = set()
         for entry in data or []:
@@ -112,16 +100,14 @@ class Domain(commands.Cog):
         ordered = sorted(subs)
 
         if not ordered:
-            return await interaction.followup.send(
-                embed=embeds.error_embed(f"Subdomínios — {domain}", "Nenhum subdomínio encontrado no CT logs.")
-            )
+            return await reply.send(interaction, embeds.error_embed(f"Subdomínios — {domain}", "Nenhum subdomínio encontrado no CT logs."))
 
         e = embeds.ok_embed(f"Subdomínios — {domain}", f"**{len(ordered)}** encontrados (Certificate Transparency).")
         chunk = "\n".join(f"• {s}" for s in ordered[:40])
         embeds.add_field(e, "Lista (até 40)", chunk)
         if len(ordered) > 40:
             embeds.add_field(e, "Obs.", f"+{len(ordered) - 40} não exibidos.")
-        await interaction.followup.send(embed=e)
+        await reply.send(interaction, e)
 
     # ------------------------------------------------------------------ TLS
     @app_commands.command(name="tls", description="Detalhes do certificado TLS/SSL de um domínio.")
@@ -129,17 +115,12 @@ class Domain(commands.Cog):
     async def tls_cmd(self, interaction: discord.Interaction, dominio: str):
         domain = clean_domain(dominio)
         if not domain:
-            return await interaction.response.send_message(
-                embed=embeds.error_embed("Domínio inválido", f"`{dominio}` não parece um domínio válido."),
-                ephemeral=True,
-            )
-        await interaction.response.defer()
+            return await reply.send(interaction, embeds.error_embed("Domínio inválido", f"`{dominio}` não parece um domínio válido."))
+        await reply.defer(interaction)
         try:
             cert = await asyncio.to_thread(_get_cert, domain)
         except Exception as e:
-            return await interaction.followup.send(
-                embed=embeds.error_embed("Falha no TLS", f"Não consegui obter o certificado de `{domain}`.\n`{e}`")
-            )
+            return await reply.send(interaction, embeds.error_embed("Falha no TLS", f"Não consegui obter o certificado de `{domain}`.\n`{e}`"))
 
         e = embeds.info_embed(f"Certificado TLS — {domain}")
         subject = dict(x[0] for x in cert.get("subject", []))
@@ -151,7 +132,7 @@ class Domain(commands.Cog):
         sans = [v for (k, v) in cert.get("subjectAltName", []) if k == "DNS"]
         if sans:
             embeds.add_field(e, f"SANs ({len(sans)})", "\n".join(sans[:15]))
-        await interaction.followup.send(embed=e)
+        await reply.send(interaction, e)
 
 
 def _get_cert(domain: str) -> dict:
