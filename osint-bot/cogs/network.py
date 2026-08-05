@@ -82,6 +82,33 @@ class Network(commands.Cog):
                 embed=embeds.error_embed("Sem resultado", f"Não foi possível resolver `{alvo}`.\n`{ex}`"))
         await interaction.followup.send(embed=e)
 
+    # --------------------------------------------------------------- IPWHOIS
+    @app_commands.command(name="ipwhois", description="Dono do bloco de IP (RDAP): organização, rede e abuse.")
+    @app_commands.describe(ip="Ex.: 8.8.8.8")
+    async def ipwhois_cmd(self, interaction: discord.Interaction, ip: str):
+        if not is_public_ip(ip):
+            return await interaction.response.send_message(
+                embed=embeds.error_embed("IP inválido", "Informe um IP público válido."), ephemeral=True)
+        await interaction.response.defer()
+        try:
+            # RDAP oficial via redirecionador da IANA (cobre ARIN/RIPE/LACNIC/APNIC)
+            data = await http.fetch_json(f"https://rdap.org/ip/{ip.strip()}")
+        except Exception as e:
+            return await interaction.followup.send(
+                embed=embeds.error_embed("Falha no RDAP", f"`{e}`"))
+
+        e = embeds.info_embed(f"IP WHOIS (RDAP) — {ip.strip()}")
+        embeds.add_field(e, "Nome da rede", data.get("name"))
+        embeds.add_field(e, "Faixa", f"{data.get('startAddress','?')} – {data.get('endAddress','?')}", inline=True)
+        embeds.add_field(e, "País", data.get("country"), inline=True)
+        # extrai organização e contato de abuse das entidades
+        org, abuse = _rdap_entities(data.get("entities", []))
+        if org:
+            embeds.add_field(e, "Organização", org)
+        if abuse:
+            embeds.add_field(e, "📮 Contato de abuse", abuse)
+        await interaction.followup.send(embed=e)
+
     # ---------------------------------------------------------------- SHODAN
     @app_commands.command(name="shodan", description="Portas e serviços expostos de um IP (requer chave Shodan).")
     @app_commands.describe(ip="Ex.: 8.8.8.8")
@@ -118,6 +145,39 @@ class Network(commands.Cog):
         if vulns:
             embeds.add_field(e, "⚠️ CVEs relatadas", ", ".join(sorted(vulns)[:15]))
         await interaction.followup.send(embed=e)
+
+
+def _rdap_entities(entities):
+    """Extrai (organização, contato_abuse) de uma lista de entidades RDAP."""
+    org = None
+    abuse = None
+    for ent in entities or []:
+        roles = ent.get("roles", [])
+        name, email = _vcard_name_email(ent.get("vcardArray"))
+        if ("registrant" in roles or "administrative" in roles) and name and not org:
+            org = name
+        if "abuse" in roles:
+            abuse = email or name
+        # entidades aninhadas (abuse costuma vir dentro de outra)
+        sub_org, sub_abuse = _rdap_entities(ent.get("entities", []))
+        org = org or sub_org
+        abuse = abuse or sub_abuse
+    return org, abuse
+
+
+def _vcard_name_email(vcard):
+    """Lê nome e e-mail de um vcardArray do RDAP."""
+    name = email = None
+    if not vcard or len(vcard) < 2:
+        return name, email
+    for item in vcard[1]:
+        if not isinstance(item, list) or len(item) < 4:
+            continue
+        if item[0] == "fn":
+            name = item[3]
+        elif item[0] == "email":
+            email = item[3]
+    return name, email
 
 
 async def setup(bot):

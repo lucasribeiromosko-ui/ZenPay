@@ -26,10 +26,14 @@ são de barra (`/`) e respondem com painéis organizados.
 | | `/tls exemplo.com` | Detalhes do certificado SSL/TLS |
 | 📡 Rede/IP | `/ip 8.8.8.8` | País, provedor, ASN, sinais de VPN/hosting |
 | | `/reversedns 8.8.8.8` | Nome (PTR) de um IP, ou IPs de um domínio |
+| | `/ipwhois 8.8.8.8` | Dono do bloco de IP e contato de abuse (RDAP) |
 | | `/shodan 8.8.8.8` | Portas e serviços expostos *(chave opcional)* |
+| 🕸️ Web | `/headers exemplo.com` | Cabeçalhos HTTP, tecnologias e headers de segurança |
+| | `/webscan exemplo.com` | Extrai e-mails, links e metadados da página |
 | 👤 Identidade | `/username fulano` | Procura o `@` em 12+ sites públicos |
 | | `/email pessoa@x.com` | Valida formato + checa MX do domínio |
 | | `/breach pessoa@x.com` | Aparece em vazamentos? *(chave HIBP opcional)* |
+| #️⃣ Hash | `/hash <hash>` | Identifica o tipo e tenta quebrar (dicionário) |
 | 🖼️ Arquivos | `/exif [anexo]` | Câmera, data e GPS de uma foto |
 | ℹ️ Ajuda | `/osint` | Abre o painel com menu de categorias |
 | | `/ajuda` | Lista rápida de todos os comandos |
@@ -103,10 +107,12 @@ osint-bot/
 ├── cogs/               # cada arquivo = um grupo de ferramentas
 │   ├── panel.py        # /osint e /ajuda (menu interativo)
 │   ├── domain.py       # /whois /dns /subdomains /tls
-│   ├── network.py      # /ip /reversedns /shodan
+│   ├── network.py      # /ip /reversedns /ipwhois /shodan
 │   ├── identity.py     # /username /email /breach
+│   ├── web.py          # /headers /webscan
+│   ├── crypto.py       # /hash
 │   └── files.py        # /exif
-└── utils/              # helpers (embeds, http, validação)
+└── utils/              # helpers (embeds, http, validação, anti-SSRF)
 ```
 
 ### Adicionar sua própria ferramenta

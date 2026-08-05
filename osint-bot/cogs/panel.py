@@ -27,7 +27,23 @@ CATEGORIES = {
         "commands": [
             ("/ip 8.8.8.8", "País, provedor, ASN e sinais de VPN/hosting."),
             ("/reversedns 8.8.8.8", "Nome (PTR) de um IP, ou IPs de um domínio."),
+            ("/ipwhois 8.8.8.8", "Dono do bloco de IP e contato de abuse (RDAP)."),
             ("/shodan 8.8.8.8", "Portas e serviços expostos (precisa de chave)."),
+        ],
+    },
+    "web": {
+        "label": "🕸️ Web",
+        "desc": "Cabeçalhos, tecnologias, e-mails e links de um site",
+        "commands": [
+            ("/headers exemplo.com", "Cabeçalhos HTTP + tecnologias + headers de segurança."),
+            ("/webscan exemplo.com", "Extrai e-mails, links e metadados da página."),
+        ],
+    },
+    "crypto": {
+        "label": "#️⃣ Hash",
+        "desc": "Identificar e quebrar hashes (dicionário)",
+        "commands": [
+            ("/hash <hash>", "Identifica o tipo e tenta quebrar (senhas fracas)."),
         ],
     },
     "identity": {
