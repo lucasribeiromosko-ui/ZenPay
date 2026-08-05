@@ -25,10 +25,13 @@ class Security(commands.Cog):
         if not CVE_RE.match(cid):
             return await reply.send(interaction, embeds.error_embed("ID inválido", "Formato correto: `CVE-2021-44228`."))
         await reply.defer(interaction)
+        headers = {"apiKey": config.NVD_API_KEY} if config.NVD_API_KEY else {}
         try:
-            data = await http.fetch_json(f"https://services.nvd.nist.gov/rest/json/cves/2.0?cveId={cid}")
+            data = await http.fetch_json(
+                f"https://services.nvd.nist.gov/rest/json/cves/2.0?cveId={cid}", headers=headers)
         except Exception as e:
-            return await reply.send(interaction, embeds.error_embed("Falha na consulta", f"`{e}`"))
+            return await reply.send(interaction, embeds.error_embed(
+                "Falha na consulta", f"A base NVD não respondeu (pode ser limite de uso; tente em instantes).\n`{e}`"))
 
         vulns = data.get("vulnerabilities", [])
         if not vulns:

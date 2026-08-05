@@ -31,16 +31,17 @@ class Files(commands.Cog):
             return await reply.send(interaction, embeds.error_embed("Não é imagem", "Anexe um arquivo de imagem."))
 
         await reply.defer(interaction)
-        raw = await imagem.read()
         try:
+            raw = await imagem.read()
             img = Image.open(io.BytesIO(raw))
             exif = img._getexif()
+            width, height, fmt = img.width, img.height, img.format
         except Exception as ex:
-            return await reply.send(interaction, embeds.error_embed("Falha ao ler", f"`{ex}`"))
+            return await reply.send(interaction, embeds.error_embed("Falha ao ler", f"Não consegui abrir a imagem.\n`{ex}`"))
 
         e = embeds.info_embed(f"EXIF — {imagem.filename}")
-        embeds.add_field(e, "Dimensões", f"{img.width} × {img.height}px", inline=True)
-        embeds.add_field(e, "Formato", img.format, inline=True)
+        embeds.add_field(e, "Dimensões", f"{width} × {height}px", inline=True)
+        embeds.add_field(e, "Formato", fmt, inline=True)
 
         if not exif:
             embeds.add_field(e, "Metadados", "Nenhum EXIF encontrado (removido ou não suportado).")

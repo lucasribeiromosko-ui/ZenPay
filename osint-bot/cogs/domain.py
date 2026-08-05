@@ -35,12 +35,15 @@ class Domain(commands.Cog):
         await reply.defer(interaction)
 
         # 1) RDAP (mais confiável e estruturado); 2) python-whois como reserva
+        def _has_data(d):
+            return bool(d and (d.get("created") or d.get("registrar") or d.get("nameservers")))
+
         data = await _whois_via_rdap(reg)
-        if not data or not (data.get("created") or data.get("registrar")):
+        if not _has_data(data):
             legacy = await _whois_via_legacy(reg)
-            if legacy and (legacy.get("created") or legacy.get("registrar")):
+            if _has_data(legacy):
                 data = legacy
-        if not data:
+        if not _has_data(data):
             return await reply.send(interaction, embeds.error_embed(
                 "Sem dados de registro", f"Não encontrei registro para `{reg}` (pode não existir ou o TLD não expor)."))
 

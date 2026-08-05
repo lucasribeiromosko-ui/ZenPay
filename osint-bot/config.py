@@ -14,6 +14,9 @@ GUILD_ID = int(_guild) if _guild.isdigit() else None
 # Chaves opcionais
 SHODAN_API_KEY = os.getenv("SHODAN_API_KEY", "").strip()
 HIBP_API_KEY = os.getenv("HIBP_API_KEY", "").strip()
+# NVD (https://nvd.nist.gov/developers/request-an-api-key) — para /cve.
+# Sem chave funciona, mas com limite baixo (~5 req/30s).
+NVD_API_KEY = os.getenv("NVD_API_KEY", "").strip()
 # Cookie de sessão do Instagram (opcional) — faz o /instagram funcionar mesmo
 # a partir de servidores/datacenter. Pegue o valor do cookie "sessionid" da
 # sua conta logada no navegador. Risco: automação pode sinalizar a conta.

@@ -158,45 +158,48 @@ class Identity(commands.Cog):
         if not is_valid_email(email):
             return await reply.send(interaction, embeds.error_embed("E-mail inválido", "Formato incorreto."))
         await reply.defer(interaction)
-        addr = email.strip().lower()
-        domain = addr.split("@")[1]
-        e = embeds.info_embed(f"E-mail — {addr}")
+        try:
+            addr = email.strip().lower()
+            domain = addr.split("@")[1]
+            e = embeds.info_embed(f"E-mail — {addr}")
 
-        # Tipo de provedor
-        embeds.add_field(e, "Formato", "✅ válido", inline=True)
-        embeds.add_field(e, "Tipo", _provider_label(domain), inline=True)
+            # Tipo de provedor
+            embeds.add_field(e, "Formato", "✅ válido", inline=True)
+            embeds.add_field(e, "Tipo", _provider_label(domain), inline=True)
 
-        # DNS: MX, SPF, DMARC
-        resolver = dns.asyncresolver.Resolver()
-        resolver.lifetime = 6.0
-        mx = await _resolve(resolver, domain, "MX")
-        mx_hosts = sorted(r.split()[-1].rstrip(".") for r in mx) if mx else []
-        embeds.add_field(e, "Recebe e-mail (MX)", "✅ sim" if mx_hosts else "❌ sem MX", inline=True)
-        if mx_hosts:
-            embeds.add_field(e, "Servidores MX", "\n".join(mx_hosts[:5]))
+            # DNS: MX, SPF, DMARC
+            resolver = dns.asyncresolver.Resolver()
+            resolver.lifetime = 6.0
+            mx = await _resolve(resolver, domain, "MX")
+            mx_hosts = sorted(r.split()[-1].rstrip(".") for r in mx) if mx else []
+            embeds.add_field(e, "Recebe e-mail (MX)", "✅ sim" if mx_hosts else "❌ sem MX", inline=True)
+            if mx_hosts:
+                embeds.add_field(e, "Servidores MX", "\n".join(mx_hosts[:5]))
 
-        txt = await _resolve(resolver, domain, "TXT")
-        has_spf = any("v=spf1" in t.lower() for t in txt)
-        dmarc = await _resolve(resolver, f"_dmarc.{domain}", "TXT")
-        has_dmarc = any("v=dmarc1" in t.lower() for t in dmarc)
-        embeds.add_field(e, "Proteção anti-spoofing",
-                         f"SPF: {'✅' if has_spf else '❌'}   DMARC: {'✅' if has_dmarc else '❌'}", inline=True)
+            txt = await _resolve(resolver, domain, "TXT")
+            has_spf = any("v=spf1" in t.lower() for t in txt)
+            dmarc = await _resolve(resolver, f"_dmarc.{domain}", "TXT")
+            has_dmarc = any("v=dmarc1" in t.lower() for t in dmarc)
+            embeds.add_field(e, "Proteção anti-spoofing",
+                             f"SPF: {'✅' if has_spf else '❌'}   DMARC: {'✅' if has_dmarc else '❌'}", inline=True)
 
-        # Gravatar (perfil público ligado ao e-mail)
-        gv = await _gravatar(addr)
-        if gv:
-            embeds.add_field(e, "Gravatar (perfil público)", gv)
+            # Gravatar (perfil público ligado ao e-mail)
+            gv = await _gravatar(addr)
+            if gv:
+                embeds.add_field(e, "Gravatar (perfil público)", gv)
 
-        # Vazamentos (XposedOrNot, grátis)
-        leaks = await _xposed_count(addr)
-        if leaks is None:
-            embeds.add_field(e, "Vazamentos", "não foi possível checar agora")
-        elif leaks == 0:
-            embeds.add_field(e, "Vazamentos", "✅ nenhum conhecido")
-        else:
-            embeds.add_field(e, "Vazamentos", f"⚠️ aparece em **{leaks}** vazamento(s) — use `/breach` para ver quais")
+            # Vazamentos (XposedOrNot, grátis)
+            leaks = await _xposed_count(addr)
+            if leaks is None:
+                embeds.add_field(e, "Vazamentos", "não foi possível checar agora")
+            elif leaks == 0:
+                embeds.add_field(e, "Vazamentos", "✅ nenhum conhecido")
+            else:
+                embeds.add_field(e, "Vazamentos", f"⚠️ aparece em **{leaks}** vazamento(s) — use `/breach` para ver quais")
 
-        e.set_footer(text=f"{config.BRAND_NAME} • dados técnicos públicos do e-mail/domínio")
+            e.set_footer(text=f"{config.BRAND_NAME} • dados técnicos públicos do e-mail/domínio")
+        except Exception as ex:
+            return await reply.send(interaction, embeds.error_embed("Falha na consulta", f"`{ex}`"))
         await reply.send(interaction, e)
 
 
