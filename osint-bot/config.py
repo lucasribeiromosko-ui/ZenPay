@@ -18,6 +18,9 @@ HIBP_API_KEY = os.getenv("HIBP_API_KEY", "").strip()
 # a partir de servidores/datacenter. Pegue o valor do cookie "sessionid" da
 # sua conta logada no navegador. Risco: automação pode sinalizar a conta.
 IG_SESSIONID = os.getenv("IG_SESSIONID", "").strip()
+# Proxy (opcional) usado SÓ nas requisições ao Instagram. Um proxy residencial
+# contorna o bloqueio por IP de datacenter. Ex.: http://usuario:senha@host:porta
+IG_PROXY = os.getenv("IG_PROXY", "").strip() or None
 
 # Identidade da FearSec exibida nos rodapés dos embeds
 BRAND_NAME = "FearSec OSINT"

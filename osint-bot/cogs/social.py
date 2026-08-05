@@ -111,9 +111,12 @@ class Social(commands.Cog):
                 "datacenter). É proteção anti-bot do Instagram, não um erro do bot.")
             embeds.add_field(e, "Ver o perfil direto", f"https://www.instagram.com/{user}/")
             if config.IG_SESSIONID:
+                proxy_hint = ("\n**429 = o IP do servidor está bloqueado pelo Instagram.** "
+                              "A única solução real é um **proxy residencial** na variável "
+                              "`IG_PROXY`.") if not config.IG_PROXY else ""
                 embeds.add_field(e, "🔎 Diagnóstico (cookie configurado)",
-                    f"`{diag}`\n401 = cookie inválido/expirado • 429 = limite • "
-                    "302/login = cookie não autenticou. Refaça o `sessionid` se persistir.")
+                    f"`{diag}`\n401 = cookie inválido/expirado • 429 = IP bloqueado • "
+                    f"302/login = cookie não autenticou.{proxy_hint}")
             else:
                 embeds.add_field(e, "🔓 Como fazer funcionar",
                     "Defina a variável **`IG_SESSIONID`** no Railway com o cookie `sessionid` "
@@ -188,7 +191,7 @@ async def _ig_api(user: str):
         headers["Cookie"] = f"sessionid={config.IG_SESSIONID}"
     try:
         session = await http.get_session()
-        async with session.get(url, headers=headers) as resp:
+        async with session.get(url, headers=headers, proxy=config.IG_PROXY) as resp:
             if resp.status == 404:
                 return "notfound", None
             if resp.status != 200:
@@ -223,7 +226,7 @@ async def _ig_html(user: str):
         headers["Cookie"] = f"sessionid={config.IG_SESSIONID}"
     try:
         session = await http.get_session()
-        async with session.get(url, headers=headers, allow_redirects=True) as resp:
+        async with session.get(url, headers=headers, allow_redirects=True, proxy=config.IG_PROXY) as resp:
             if resp.status == 404:
                 return "notfound", None
             if resp.status != 200:
@@ -240,12 +243,30 @@ async def _ig_html(user: str):
     title = meta("og:title") or ""
     image = meta("og:image")
     counts = re.search(r'([\d.,KMkm]+)\s+Followers,\s*([\d.,KMkm]+)\s+Following,\s*([\d.,KMkm]+)\s+Posts', desc)
-    if not counts and not title:
-        return "blocked", "sem metadados"
     name = None
     tm = re.search(r'^(.*?)\s*\(@', title)
     if tm:
         name = tm.group(1).strip()
+
+    # Fallback extra: dados no JSON embutido na página (quando as og:tags faltam)
+    if not counts:
+        fb = re.search(r'"edge_followed_by":\{"count":(\d+)\}', html)
+        fl = re.search(r'"edge_follow":\{"count":(\d+)\}', html)
+        pc = re.search(r'"edge_owner_to_timeline_media":\{"count":(\d+)\}', html)
+        fn = re.search(r'"full_name":"([^"]*)"', html)
+        if fb or fn:
+            return "ok", {
+                "full_name": (fn.group(1).encode().decode("unicode_escape") if fn else name),
+                "biography": None,
+                "followers": _fmt_int(fb.group(1)) if fb else None,
+                "following": _fmt_int(fl.group(1)) if fl else None,
+                "posts": _fmt_int(pc.group(1)) if pc else None,
+                "is_private": None, "is_verified": None, "external_url": None,
+                "profile_pic": image, "uid": None, "category": None, "source": "html",
+            }
+
+    if not counts and not title:
+        return "blocked", "sem metadados"
     return "ok", {
         "full_name": name,
         "biography": None,
