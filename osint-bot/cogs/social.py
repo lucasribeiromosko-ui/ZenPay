@@ -239,44 +239,26 @@ async def _ig_html(user: str):
         m = re.search(rf'<meta property="{re.escape(prop)}" content="([^"]*)"', html)
         return m.group(1) if m else None
 
-    desc = meta("og:description") or ""
+    # RIGOROSO: só confia se o og:title for do perfil pedido (contém (@user))
+    # e se houver os contadores na og:description da própria página.
     title = meta("og:title") or ""
-    image = meta("og:image")
+    if f"@{user}".lower() not in title.lower().replace(" ", ""):
+        return "blocked", "pagina-muro"  # Instagram não serviu o perfil real
+    desc = meta("og:description") or ""
     counts = re.search(r'([\d.,KMkm]+)\s+Followers,\s*([\d.,KMkm]+)\s+Following,\s*([\d.,KMkm]+)\s+Posts', desc)
-    name = None
-    tm = re.search(r'^(.*?)\s*\(@', title)
-    if tm:
-        name = tm.group(1).strip()
-
-    # Fallback extra: dados no JSON embutido na página (quando as og:tags faltam)
     if not counts:
-        fb = re.search(r'"edge_followed_by":\{"count":(\d+)\}', html)
-        fl = re.search(r'"edge_follow":\{"count":(\d+)\}', html)
-        pc = re.search(r'"edge_owner_to_timeline_media":\{"count":(\d+)\}', html)
-        fn = re.search(r'"full_name":"([^"]*)"', html)
-        if fb or fn:
-            return "ok", {
-                "full_name": (fn.group(1).encode().decode("unicode_escape") if fn else name),
-                "biography": None,
-                "followers": _fmt_int(fb.group(1)) if fb else None,
-                "following": _fmt_int(fl.group(1)) if fl else None,
-                "posts": _fmt_int(pc.group(1)) if pc else None,
-                "is_private": None, "is_verified": None, "external_url": None,
-                "profile_pic": image, "uid": None, "category": None, "source": "html",
-            }
-
-    if not counts and not title:
-        return "blocked", "sem metadados"
+        return "blocked", "sem contadores"
+    tm = re.search(r'^(.*?)\s*\(@', title)
     return "ok", {
-        "full_name": name,
+        "full_name": tm.group(1).strip() if tm else None,
         "biography": None,
-        "followers": counts.group(1) if counts else None,
-        "following": counts.group(2) if counts else None,
-        "posts": counts.group(3) if counts else None,
+        "followers": counts.group(1),
+        "following": counts.group(2),
+        "posts": counts.group(3),
         "is_private": None,
         "is_verified": None,
         "external_url": None,
-        "profile_pic": image,
+        "profile_pic": meta("og:image"),
         "uid": None,
         "category": None,
         "source": "html",
