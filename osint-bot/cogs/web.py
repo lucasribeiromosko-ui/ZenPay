@@ -176,6 +176,33 @@ class Web(commands.Cog):
         await reply.send(interaction, e)
 
 
+    # ------------------------------------------------------------ UNSHORTEN
+    @app_commands.command(name="unshorten", description="Expande um link encurtado/disfarçado e mostra os redirecionamentos.")
+    @app_commands.describe(url="Ex.: https://bit.ly/xxxx")
+    async def unshorten_cmd(self, interaction: discord.Interaction, url: str):
+        await reply.defer(interaction)
+        safe, info = await resolve_public_url(url)
+        if not safe:
+            return await reply.send(interaction, embeds.error_embed("URL bloqueada", info))
+        try:
+            session = await http.get_session()
+            async with session.get(safe, allow_redirects=True) as resp:
+                chain = [str(h.url) for h in resp.history] + [str(resp.url)]
+                status = resp.status
+                final_host = urlparse(str(resp.url)).hostname
+        except Exception as e:
+            return await reply.send(interaction, embeds.error_embed("Falha ao seguir", f"`{e}`"))
+        e = embeds.info_embed(f"Redirecionamentos — {info}",
+                              f"{len(chain)} passo(s) até o destino final.")
+        hops = "\n".join(f"`{i+1}.` {u}" for i, u in enumerate(chain))
+        embeds.add_field(e, "Cadeia", hops[:1024])
+        embeds.add_field(e, "🎯 Destino final", f"[{final_host}]({chain[-1]})")
+        embeds.add_field(e, "Status HTTP", status, inline=True)
+        if len(chain) > 1:
+            embeds.add_field(e, "⚠️ Atenção", "Link com redirecionamento — comum em phishing e rastreadores.")
+        e.set_footer(text="FearSec OSINT • destino revelado sem você precisar clicar")
+        await reply.send(interaction, e)
+
     # ------------------------------------------------------------ SCREENSHOT
     @app_commands.command(name="screenshot", description="Tira um print de um site (preview sem precisar visitar).")
     @app_commands.describe(url="Ex.: exemplo.com")

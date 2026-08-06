@@ -19,7 +19,7 @@ são de barra (`/`) e respondem com painéis organizados.
 > 🔒 **Privacidade:** todas as respostas são **privadas (ephemeral)** — só quem
 > executou o comando vê o resultado. Nada aparece para o resto do servidor.
 
-## 🧰 Ferramentas incluídas (38 comandos)
+## 🧰 Ferramentas incluídas (44 comandos)
 
 | Categoria | Comando | O que faz |
 |-----------|---------|-----------|
@@ -32,6 +32,8 @@ são de barra (`/`) e respondem com painéis organizados.
 | | `/reversedns 8.8.8.8` | PTR de um IP, ou IPs de um domínio |
 | | `/asn AS15169` | Prefixos de IP e organização de um ASN (RIPEstat) |
 | | `/mac 00:1A:2B:3C:4D:5E` | Fabricante de um endereço MAC (OUI) |
+| | `/tor 8.8.8.8` | IP é nó de saída Tor? |
+| | `/abuseipdb 8.8.8.8` | Reputação de abuso do IP *(chave opcional)* |
 | | `/shodan 8.8.8.8` | Portas/serviços expostos *(chave opcional)* |
 | 🕸️ Web & Sites | `/headers exemplo.com` | Cabeçalhos HTTP, tecnologias, segurança |
 | | `/webscan exemplo.com` | Extrai e-mails, links e metadados |
@@ -39,8 +41,10 @@ são de barra (`/`) e respondem com painéis organizados.
 | | `/wayback exemplo.com` | Histórico no Wayback Machine (archive.org) |
 | | `/screenshot exemplo.com` | Print/preview do site |
 | | `/urlscan exemplo.com` | Scans públicos do domínio (phishing/scam) |
+| | `/unshorten bit.ly/xxxx` | Expande link encurtado e revela o destino real |
 | 👤 Pessoas | `/username fulano` | Procura o `@` em 21 sites (rápido) |
 | | `/sherlock fulano` | Varredura do `@` em 50+ sites (completa) |
+| | `/github fulano` | Perfil do GitHub: nome, empresa, e-mail público |
 | | `/email pessoa@x.com` | Relatório completo: MX, SPF/DMARC, provedor, Gravatar, vazamentos |
 | | `/breach pessoa@x.com` | Vazamentos (grátis via XposedOrNot; HIBP se tiver chave) |
 | | `/phone +5511999998888` | Valida telefone: país, operadora, tipo |
@@ -50,8 +54,10 @@ são de barra (`/`) e respondem com painéis organizados.
 | 🔐 Segurança | `/hash <hash>` | Identifica e quebra hash (MD5/SHA) |
 | | `/cve CVE-2021-44228` | Detalhes de uma vulnerabilidade (NVD) |
 | 🎮 Discord | `/discord <id>` | Investiga conta pelo ID (nome, criação, badges) |
+| | `/invite discord.gg/x` | Resolve convite: servidor, ID, membros, criação |
 | | `/snowflake <id>` | Data de criação de qualquer ID do Discord |
 | | `/ping` | Status e latência do bot |
+| 💰 Blockchain | `/wallet <endereço>` | Saldo e transações de carteira BTC/ETH |
 | 🔎 Busca & Dorks | `/buscar termo onde` | Acha arquivos públicos por título e tipo (Drive, PDF, planilha, Trello…) |
 | | `/dork exemplo.com` | Investiga um domínio: arquivos, logins e brechas expostas |
 | 🧰 Ferramentas | `/base64 encode/decode` | Codifica/decodifica Base64 |

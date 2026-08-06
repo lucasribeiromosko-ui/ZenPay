@@ -146,6 +146,37 @@ class Social(commands.Cog):
         e.set_footer(text=f"{config.BRAND_NAME} • dados públicos do perfil • fonte: {src}")
         await reply.send(interaction, e)
 
+    # --------------------------------------------------------------- GITHUB
+    @app_commands.command(name="github", description="Dados públicos de um perfil do GitHub (nome, empresa, local, e-mail).")
+    @app_commands.describe(usuario="Nome de usuário do GitHub")
+    async def github_cmd(self, interaction: discord.Interaction, usuario: str):
+        user = usuario.strip().lstrip("@")
+        if not re.match(r"^[A-Za-z0-9-]{1,39}$", user):
+            return await reply.send(interaction, embeds.error_embed("Usuário inválido", "Nome de usuário do GitHub incorreto."))
+        await reply.defer(interaction)
+        try:
+            data = await http.fetch_json(f"https://api.github.com/users/{user}")
+        except Exception:
+            return await reply.send(interaction, embeds.error_embed("Não encontrado", f"`{user}` não existe no GitHub (ou limite de uso)."))
+        created = (data.get("created_at") or "")[:10]
+        e = embeds.info_embed(f"🐙 GitHub — @{data.get('login', user)}",
+                              f"**{data.get('name') or '—'}**")
+        if data.get("avatar_url"):
+            e.set_thumbnail(url=data["avatar_url"])
+        if data.get("bio"):
+            embeds.add_field(e, "Bio", data["bio"][:300])
+        embeds.add_field(e, "Repositórios", data.get("public_repos", 0), inline=True)
+        embeds.add_field(e, "Seguidores", data.get("followers", 0), inline=True)
+        embeds.add_field(e, "Criado em", created, inline=True)
+        for label, key in [("Empresa", "company"), ("Local", "location"),
+                           ("E-mail público", "email"), ("Site/blog", "blog"),
+                           ("Twitter/X", "twitter_username")]:
+            if data.get(key):
+                embeds.add_field(e, label, str(data[key])[:100], inline=True)
+        embeds.add_field(e, "Perfil", data.get("html_url", f"https://github.com/{user}"))
+        e.set_footer(text=f"{config.BRAND_NAME} • dados públicos do GitHub")
+        await reply.send(interaction, e)
+
     # ------------------------------------------------------------- SHERLOCK
     @app_commands.command(name="sherlock", description="Procura um @username em dezenas de sites (varredura completa).")
     @app_commands.describe(username="Nome de usuário (sem @)")

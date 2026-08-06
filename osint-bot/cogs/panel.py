@@ -30,6 +30,8 @@ CATEGORIES = {
             ("/reversedns", "Nome (PTR) de um IP, ou IPs de um domínio.", "/reversedns 8.8.8.8"),
             ("/asn", "Prefixos de IP e organização de um ASN.", "/asn AS15169"),
             ("/mac", "Fabricante de um endereço MAC.", "/mac 00:1A:2B:3C:4D:5E"),
+            ("/tor", "Verifica se um IP é nó de saída Tor.", "/tor 8.8.8.8"),
+            ("/abuseipdb", "Reputação de abuso de um IP (chave).", "/abuseipdb 8.8.8.8"),
             ("/shodan", "Portas e serviços expostos (precisa de chave).", "/shodan 8.8.8.8"),
         ],
     },
@@ -43,6 +45,7 @@ CATEGORIES = {
             ("/wayback", "Histórico do site no Wayback Machine.", "/wayback exemplo.com"),
             ("/screenshot", "Tira um print do site (preview seguro).", "/screenshot exemplo.com"),
             ("/urlscan", "Scans de phishing/scam do domínio (urlscan.io).", "/urlscan exemplo.com"),
+            ("/unshorten", "Expande link encurtado e mostra o destino real.", "/unshorten bit.ly/xxxx"),
         ],
     },
     "pessoas": {
@@ -51,6 +54,7 @@ CATEGORIES = {
         "commands": [
             ("/username", "Procura o @ em 21 sites (rápido).", "/username fulano"),
             ("/sherlock", "Varredura completa do @ em 50+ sites.", "/sherlock fulano"),
+            ("/github", "Perfil do GitHub: nome, empresa, e-mail público.", "/github fulano"),
             ("/email", "Relatório completo do e-mail.", "/email a@b.com"),
             ("/breach", "E-mail em vazamentos (grátis).", "/breach a@b.com"),
             ("/phone", "Valida telefone: país, operadora, tipo.", "/phone +5511999998888"),
@@ -84,8 +88,16 @@ CATEGORIES = {
         "desc": "Investigar contas e IDs do Discord",
         "commands": [
             ("/discord", "Investiga uma conta pelo ID (nome, criação, badges).", "/discord 123456789012345678"),
+            ("/invite", "Resolve um convite: servidor, ID, membros, criação.", "/invite discord.gg/abcd"),
             ("/snowflake", "Data de criação de qualquer ID do Discord.", "/snowflake 123456789012345678"),
             ("/ping", "Status e latência do bot.", "/ping"),
+        ],
+    },
+    "cripto": {
+        "label": "💰 Blockchain",
+        "desc": "Rastrear carteiras cripto (golpe/extorsão)",
+        "commands": [
+            ("/wallet", "Saldo e transações de uma carteira BTC/ETH.", "/wallet bc1q…"),
         ],
     },
     "busca": {

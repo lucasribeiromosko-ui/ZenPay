@@ -1,10 +1,12 @@
-"""Ferramentas de Discord: investigar conta por ID, decodificar snowflake, ping."""
+"""Ferramentas de Discord: investigar conta/servidor, decodificar snowflake, ping."""
+import re
+
 import discord
 from discord import app_commands
 from discord.ext import commands
 
 import config
-from utils import embeds, reply
+from utils import embeds, http, reply
 
 DISCORD_EPOCH = 1420070400000  # ms
 
@@ -59,6 +61,40 @@ class DiscordInfo(commands.Cog):
         if user.banner:
             embeds.add_field(e, "Banner", f"[abrir imagem]({user.banner.url})", inline=True)
         e.set_footer(text=f"{config.BRAND_NAME} • dados públicos da conta")
+        await reply.send(interaction, e)
+
+    # -------------------------------------------------------------- INVITE
+    @app_commands.command(name="invite", description="Investiga um convite do Discord: servidor, ID, membros e criação.")
+    @app_commands.describe(convite="Link ou código, ex.: discord.gg/abcd ou abcd")
+    async def invite_cmd(self, interaction: discord.Interaction, convite: str):
+        code = convite.strip().rstrip("/").split("/")[-1].split("?")[0]
+        if not re.match(r"^[A-Za-z0-9-]{1,25}$", code):
+            return await reply.send(interaction, embeds.error_embed("Convite inválido", "Use `discord.gg/codigo` ou só o código."))
+        await reply.defer(interaction)
+        try:
+            data = await http.fetch_json(
+                f"https://discord.com/api/v10/invites/{code}?with_counts=true&with_expiration=true")
+        except Exception:
+            return await reply.send(interaction, embeds.error_embed("Convite não encontrado", "Expirou, é inválido ou o servidor foi removido."))
+        guild = data.get("guild") or {}
+        channel = data.get("channel") or {}
+        inviter = data.get("inviter") or {}
+        gid = guild.get("id")
+        e = embeds.info_embed(f"Convite — {guild.get('name') or 'servidor'}")
+        if guild.get("icon") and gid:
+            e.set_thumbnail(url=f"https://cdn.discordapp.com/icons/{gid}/{guild['icon']}.png")
+        embeds.add_field(e, "Servidor", guild.get("name"))
+        embeds.add_field(e, "ID do servidor", gid, inline=True)
+        if gid and str(gid).isdigit():
+            embeds.add_field(e, "Criado em", f"<t:{_snowflake_ts(int(gid))}:D>", inline=True)
+        embeds.add_field(e, "Membros", data.get("approximate_member_count"), inline=True)
+        embeds.add_field(e, "Online agora", data.get("approximate_presence_count"), inline=True)
+        embeds.add_field(e, "Canal", f"#{channel.get('name')}" if channel.get("name") else "—", inline=True)
+        if inviter:
+            embeds.add_field(e, "Convidado por", f"@{inviter.get('username')} (ID {inviter.get('id')})")
+        if guild.get("description"):
+            embeds.add_field(e, "Descrição", guild["description"][:300])
+        e.set_footer(text=f"{config.BRAND_NAME} • dados públicos do convite")
         await reply.send(interaction, e)
 
     # ----------------------------------------------------------- SNOWFLAKE

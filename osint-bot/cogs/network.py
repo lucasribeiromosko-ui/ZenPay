@@ -126,6 +126,58 @@ class Network(commands.Cog):
             embeds.add_field(e, "Obs.", f"+{len(v4) - 25} prefixos IPv4 não exibidos.")
         await reply.send(interaction, e)
 
+    # ------------------------------------------------------------------- TOR
+    @app_commands.command(name="tor", description="Verifica se um IP é um nó de saída da rede Tor.")
+    @app_commands.describe(ip="Ex.: 8.8.8.8")
+    async def tor_cmd(self, interaction: discord.Interaction, ip: str):
+        if not is_public_ip(ip):
+            return await reply.send(interaction, embeds.error_embed("IP inválido", "Informe um IP público válido."))
+        await reply.defer(interaction)
+        try:
+            text = await http.fetch_text("https://check.torproject.org/torbulkexitlist")
+        except Exception as e:
+            return await reply.send(interaction, embeds.error_embed("Falha na consulta", f"`{e}`"))
+        exits = set(text.split())
+        is_exit = ip.strip() in exits
+        e = embeds.info_embed(f"Tor — {ip.strip()}")
+        embeds.add_field(e, "É nó de saída Tor?", "🧅 SIM" if is_exit else "❌ não", inline=True)
+        embeds.add_field(e, "Lista consultada", f"{len(exits)} nós de saída conhecidos", inline=True)
+        if is_exit:
+            embeds.add_field(e, "Significado", "O tráfego desse IP pode ser de **qualquer pessoa** usando Tor — não identifica um indivíduo.")
+        await reply.send(interaction, e)
+
+    # -------------------------------------------------------------- ABUSEIPDB
+    @app_commands.command(name="abuseipdb", description="Reputação de abuso de um IP (denúncias). Requer chave AbuseIPDB.")
+    @app_commands.describe(ip="Ex.: 8.8.8.8")
+    async def abuseipdb_cmd(self, interaction: discord.Interaction, ip: str):
+        if not config.ABUSEIPDB_API_KEY:
+            return await reply.send(interaction, embeds.error_embed(
+                "AbuseIPDB não configurado",
+                "Adicione `ABUSEIPDB_API_KEY` (grátis em https://www.abuseipdb.com/register)."))
+        if not is_public_ip(ip):
+            return await reply.send(interaction, embeds.error_embed("IP inválido", "Informe um IP público válido."))
+        await reply.defer(interaction)
+        try:
+            data = await http.fetch_json(
+                f"https://api.abuseipdb.com/api/v2/check?ipAddress={ip.strip()}&maxAgeInDays=90",
+                headers={"Key": config.ABUSEIPDB_API_KEY, "Accept": "application/json"})
+        except Exception as e:
+            return await reply.send(interaction, embeds.error_embed("Falha na consulta", f"`{e}`"))
+        d = data.get("data", {})
+        score = d.get("abuseConfidenceScore", 0)
+        color = config.ERROR_COLOR if score >= 50 else config.BRAND_COLOR
+        e = embeds.base_embed(f"AbuseIPDB — {d.get('ipAddress', ip)}",
+                              f"Índice de abuso: **{score}%**", color)
+        embeds.add_field(e, "Denúncias (90 dias)", d.get("totalReports", 0), inline=True)
+        embeds.add_field(e, "País", d.get("countryCode"), inline=True)
+        embeds.add_field(e, "Tipo de uso", d.get("usageType"), inline=True)
+        embeds.add_field(e, "ISP", d.get("isp"))
+        embeds.add_field(e, "Domínio", d.get("domain"), inline=True)
+        embeds.add_field(e, "Tor?", "sim" if d.get("isTor") else "não", inline=True)
+        if d.get("lastReportedAt"):
+            embeds.add_field(e, "Última denúncia", d["lastReportedAt"][:10], inline=True)
+        await reply.send(interaction, e)
+
     # ------------------------------------------------------------------- MAC
     @app_commands.command(name="mac", description="Fabricante (vendor) de um endereço MAC de placa de rede.")
     @app_commands.describe(mac="Ex.: 00:1A:2B:3C:4D:5E")
