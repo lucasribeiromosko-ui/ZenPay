@@ -11,3 +11,8 @@ env/
 # Uploads temporários
 tmp/
 *.log
+
+# Banco local do cofre de senhas
+data/
+*.db
+*.sqlite3

@@ -27,6 +27,11 @@ IG_SESSIONID = os.getenv("IG_SESSIONID", "").strip()
 # contorna o bloqueio por IP de datacenter. Ex.: http://usuario:senha@host:porta
 IG_PROXY = os.getenv("IG_PROXY", "").strip() or None
 
+# Banco local (SQLite) para o cofre de senhas do /gerar-senha.
+# No Railway, monte um Volume e aponte DB_PATH pra ele (ex.: /data/bot.db)
+# para as senhas sobreviverem a novos deploys.
+DB_PATH = os.getenv("DB_PATH", "data/bot.db").strip()
+
 # Identidade da FearSec exibida nos rodapés dos embeds
 BRAND_NAME = "FearSec OSINT"
 BRAND_COLOR = 0x2ECC71  # verde

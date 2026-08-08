@@ -117,6 +117,15 @@ CATEGORIES = {
             ("/useragent", "Analisa uma string de User-Agent.", "/useragent Mozilla/5.0…"),
         ],
     },
+    "senhas": {
+        "label": "🔑 Senhas",
+        "desc": "Gerador seguro + cofre pessoal",
+        "commands": [
+            ("/gerar-senha", "Gera senha segura (números/letras/forte, 8–28) e guarda.", "/gerar-senha tipo:Forte tamanho:16"),
+            ("/senhas", "Mostra as senhas que você guardou (só você vê).", "/senhas"),
+            ("/apagar-senha", "Apaga uma senha do seu cofre.", "/apagar-senha nome:Discord"),
+        ],
+    },
     "ajuda": {
         "label": "ℹ️ Ajuda",
         "desc": "Como usar o bot",
