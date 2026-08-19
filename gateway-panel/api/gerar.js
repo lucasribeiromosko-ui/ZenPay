@@ -109,6 +109,19 @@ export default async function handler(req, res) {
   try {
     const out = await adapter.create({ valor, descricao, pagador });
     if (!out.ok) return res.status(502).json({ erro: out.erro, detalhe: out.raw });
+
+    // Monta o link de pagamento HOSPEDADO NA CENTRALPAY (QR + copia-e-cola),
+    // pra nunca redirecionar pro link cru da gateway terceirizada.
+    if (out.code) {
+      const host = req.headers["x-forwarded-host"] || req.headers.host;
+      const proto = req.headers["x-forwarded-proto"] || "https";
+      const payload = Buffer.from(JSON.stringify({
+        id: out.id, code: out.code, valor: Number(valor), gateway,
+      })).toString("base64url");
+      out.pay_url = `${proto}://${host}/pay.html#${payload}`;
+    } else {
+      out.pay_url = out.link || null;
+    }
     return res.status(200).json(out);
   } catch (e) {
     return res.status(500).json({ erro: "Falha ao contatar a gateway", detalhe: String(e) });

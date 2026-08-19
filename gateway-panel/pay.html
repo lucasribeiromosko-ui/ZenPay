@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CentralPay — Pagamento</title>
+  <style>
+    :root{
+      --bg:#0d0a16; --surface:#171226; --surface2:#1f1830; --border:#2c2340;
+      --text:#efeafe; --muted:#a99fc7; --purple:#8b5cf6; --purple2:#c4b5fd;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;background:
+      radial-gradient(900px 500px at 50% -10%,rgba(139,92,246,.18),transparent),
+      var(--bg);
+      color:var(--text);font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      display:flex;align-items:center;justify-content:center;padding:22px}
+    .card{width:100%;max-width:400px;background:linear-gradient(180deg,var(--surface),var(--surface2));
+      border:1px solid var(--border);border-radius:22px;padding:26px 24px;
+      box-shadow:0 30px 80px -30px rgba(139,92,246,.5)}
+    .brand{display:flex;align-items:center;gap:10px;justify-content:center;margin-bottom:4px}
+    .logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(145deg,#9168f7,#6d28d9);
+      display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff}
+    .brand b{font-size:18px;letter-spacing:.3px}
+    .valor{text-align:center;font-size:32px;font-weight:800;margin:14px 0 2px;
+      background:linear-gradient(90deg,var(--purple2),#7dd3fc);-webkit-background-clip:text;background-clip:text;color:transparent}
+    .gw{text-align:center;color:var(--muted);font-size:13px;margin-bottom:16px}
+    .qr{background:#fff;border-radius:16px;padding:14px;display:flex;justify-content:center;margin:0 auto 18px;width:fit-content}
+    .qr img{display:block;width:210px;height:210px;image-rendering:pixelated}
+    label{display:block;font-size:12px;color:var(--muted);margin:0 0 7px;text-transform:uppercase;letter-spacing:.5px}
+    .copyrow{display:flex;gap:8px}
+    .copyrow input{flex:1;min-width:0;background:var(--bg);border:1px solid var(--border);color:var(--text);
+      border-radius:11px;padding:11px 12px;font-size:12px;font-family:ui-monospace,Menlo,Consolas,monospace}
+    .btn{background:linear-gradient(180deg,#9168f7,#6d28d9);color:#fff;border:0;border-radius:11px;
+      padding:0 16px;font-weight:700;cursor:pointer;font-size:14px}
+    .btn:active{transform:translateY(1px)}
+    .note{color:var(--muted);font-size:12.5px;line-height:1.55;margin:18px 0 0;text-align:center}
+    .err{text-align:center;color:#ffb4b4;padding:40px 10px}
+  </style>
+</head>
+<body>
+  <div class="card" id="card">
+    <div class="brand"><div class="logo">C</div><b>CentralPay</b></div>
+    <div class="valor" id="valor"></div>
+    <div class="gw" id="gw"></div>
+    <div class="qr" id="qr"></div>
+    <label>Pix copia-e-cola</label>
+    <div class="copyrow">
+      <input id="code" readonly>
+      <button class="btn" onclick="copiar()">Copiar</button>
+    </div>
+    <p class="note">Abra o app do seu banco → Pix → <b>Pix Copia e Cola</b>, cole o código acima. Ou escaneie o QR Code.</p>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+  <script>
+    function b64urlDecode(s){
+      s = s.replace(/-/g,"+").replace(/_/g,"/");
+      while (s.length % 4) s += "=";
+      return decodeURIComponent(escape(atob(s)));
+    }
+    function copiar(){
+      const i = document.getElementById("code");
+      i.select();
+      navigator.clipboard && navigator.clipboard.writeText(i.value);
+      const b = document.querySelector(".btn"); const t = b.textContent;
+      b.textContent = "Copiado!"; setTimeout(()=>b.textContent=t, 1500);
+    }
+    try{
+      const data = JSON.parse(b64urlDecode(location.hash.slice(1)));
+      document.getElementById("code").value = data.code || "";
+      if (data.valor != null)
+        document.getElementById("valor").textContent =
+          Number(data.valor).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+      if (data.gateway)
+        document.getElementById("gw").textContent = "via " + data.gateway;
+      if (data.code && typeof qrcode === "function"){
+        const qr = qrcode(0, "M");
+        qr.addData(data.code);
+        qr.make();
+        document.getElementById("qr").innerHTML = qr.createImgTag(5, 8);
+      } else {
+        document.getElementById("qr").style.display = "none";
+      }
+    }catch(e){
+      document.getElementById("card").innerHTML =
+        '<div class="err">Link de pagamento inválido ou expirado.</div>';
+    }
+  </script>
+</body>
+</html>
