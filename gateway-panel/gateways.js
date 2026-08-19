@@ -9,12 +9,11 @@
 //  taxaSaqueFixa    = valor fixo (R$) por saque
 //  prazo            = prazo de liberação do dinheiro
 // ============================================================================
+// Gateways integradas (LofyPay + Sharpify). As TAXAS são placeholders —
+// ajuste com os valores reais do seu contrato de cada gateway.
 const GATEWAYS = [
-  { id: "lofypay",   nome: "LofyPay",   cor: "#8b5cf6", taxaReceber: 4.99, taxaReceberFixa: 0.49, taxaSaque: 1.50, taxaSaqueFixa: 3.67, prazo: "D+2", metodos: ["Pix"] },
-  { id: "sharpify",  nome: "Sharpify",  cor: "#a855f7", taxaReceber: 3.99, taxaReceberFixa: 0.39, taxaSaque: 1.99, taxaSaqueFixa: 2.50, prazo: "D+1", metodos: ["Pix", "Cartão"] },
-  { id: "bravopay",  nome: "BravoPay",  cor: "#7c3aed", taxaReceber: 4.49, taxaReceberFixa: 0.40, taxaSaque: 0.00, taxaSaqueFixa: 4.90, prazo: "D+2", metodos: ["Pix"] },
-  { id: "dominipay", nome: "Dominipay", cor: "#9333ea", taxaReceber: 5.49, taxaReceberFixa: 0.00, taxaSaque: 2.50, taxaSaqueFixa: 0.00, prazo: "D+0", metodos: ["Pix", "Cartão", "Boleto"] },
-  { id: "goatpay",   nome: "GoatPay",   cor: "#c084fc", taxaReceber: 3.49, taxaReceberFixa: 0.59, taxaSaque: 1.00, taxaSaqueFixa: 3.00, prazo: "D+1", metodos: ["Pix"] },
+  { id: "lofypay",  nome: "LofyPay",  cor: "#8b5cf6", taxaReceber: 4.99, taxaReceberFixa: 0.49, taxaSaque: 1.50, taxaSaqueFixa: 3.67, prazo: "D+2", metodos: ["Pix"] },
+  { id: "sharpify", nome: "Sharpify", cor: "#a855f7", taxaReceber: 3.99, taxaReceberFixa: 0.39, taxaSaque: 1.99, taxaSaqueFixa: 2.50, prazo: "D+1", metodos: ["Pix"] },
 ];
 
 // Calcula o que o cliente recebe e o que sobra após taxas.

@@ -15,11 +15,11 @@ completa** de cada uma (receber **e** sacar).
 - **Carteira** — saldo disponível/pendente + **solicitar saque** (mostra a taxa de saque e o líquido).
 - **Gerar pagamento** — escolhe a gateway (cards com as taxas), digita o valor e vê o **detalhamento completo**: taxa de recebimento → o que cai → taxa de saque → líquido final.
 
-## ⚙️ Gateways
-LofyPay · Sharpify · BravoPay · Dominipay · GoatPay
-> As **taxas** ficam em `gateways.js` (`taxaReceber`, `taxaReceberFixa`,
-> `taxaSaque`, `taxaSaqueFixa`). Os valores atuais são **placeholders** — troque
-> pelos reais de cada gateway.
+## ⚙️ Gateways integradas
+**LofyPay** e **Sharpify** (Pix).
+> As **taxas** exibidas ficam em `gateways.js` — são **placeholders**, ajuste
+> pelos valores reais do seu contrato. A cobrança de verdade é criada pela API
+> real de cada gateway (`api/gerar.js`).
 
 ---
 
@@ -34,16 +34,20 @@ As chaves **secretas** NUNCA vão no frontend. Elas ficam nas **Environment
 Variables** da Vercel:
 
 1. No projeto da Vercel → **Settings → Environment Variables** → adicione:
-   - `LOFYPAY_SECRET`, `SHARPIFY_SECRET`, `BRAVOPAY_SECRET`, `DOMINIPAY_SECRET`, `GOATPAY_SECRET`
-2. Abra `api/gerar.js` e ajuste, para cada gateway, a **URL** e o **corpo do
-   request** conforme a **documentação** dela (headers, campos, etc.).
-3. (Opcional) Crie `api/saque.js` no mesmo molde para os saques.
-4. No `app.js`, troque as simulações (`gerarPagamento`, `pedirSaque`) por um
-   `fetch("/api/gerar", { method:"POST", body: JSON.stringify({...}) })` e mostre
-   o QR Code / Pix copia-e-cola que a gateway retornar.
+   - `LOFYPAY_SECRET` — a `sk_live_…` da LofyPay
+   - `SHARPIFY_CLIENT_ID` — o `x-sharpify-client-id`
+   - `SHARPIFY_CLIENT_SECRET` — o `x-sharpify-client-secret`
+2. Redeploy. Pronto — a tela **Gerar pagamento** já cria o Pix real:
+   `api/gerar.js` chama `POST /api/v1/gateway` (LofyPay) e
+   `POST /api/v1/checkout/payment-link/create` (Sharpify), e a tela mostra o
+   Pix copia-e-cola, o QR Code e (Sharpify) o link.
 
-> 💡 Me manda as **docs das APIs** e eu completo o `api/gerar.js` e o `api/saque.js`
-> de cada gateway, além de plugar o resultado (QR Code) na tela.
+> ⚠️ **Nunca** coloque a `sk_live` nem o `client_secret` no frontend nem no
+> repositório — só nas Environment Variables da Vercel.
+>
+> Próximos (posso deixar prontos): `api/saque.js` (LofyPay `POST /api/v1/cashout`)
+> e os **webhooks** (`notification_url` / eventos assinados) para atualizar o
+> status dos pagamentos e saques automaticamente.
 
 ---
 

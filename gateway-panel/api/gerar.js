@@ -1,73 +1,93 @@
 // ============================================================================
-//  Vercel Serverless Function — cria um pagamento REAL (CentralPay).
+//  Vercel Serverless Function — cria um pagamento PIX real (CentralPay).
+//  Integrações: LofyPay e Sharpify.
 //
-//  SEGURANÇA: as chaves ficam em variáveis de ambiente da Vercel (process.env).
-//  O navegador nunca vê a chave secreta — ele só chama esta função.
+//  SEGURANÇA: chaves só em process.env (Environment Variables da Vercel).
+//  O navegador nunca vê a chave — ele só chama esta função.
 //
-//  ⚠️ Os endpoints/campos marcados com "CONFIRMAR" precisam bater com a DOC de
-//  cada gateway. Me manda o exemplo de "criar pagamento" (request + response)
-//  de cada doc que eu finalizo os campos exatos.
+//  Variáveis necessárias na Vercel:
+//    LOFYPAY_SECRET            (sk_live_… da LofyPay)
+//    SHARPIFY_CLIENT_ID        (x-sharpify-client-id)
+//    SHARPIFY_CLIENT_SECRET    (x-sharpify-client-secret)
 // ============================================================================
 
 const ADAPTERS = {
-  // -------------------------------------------------------------- LofyPay
+  // ------------------------------------------------------------- LofyPay
+  //  POST https://app.lofypay.com/api/v1/gateway  (Bearer sk_live)
+  //  valor em REAIS. Resposta: { status:"success", paymentCode, idTransaction,
+  //  paymentCodeBase64? }. HTTP 200 pode conter { status:"error", message }.
   lofypay: {
     envs: ["LOFYPAY_SECRET"],
-    build({ centavos, descricao, pagador }) {
-      const secret = process.env.LOFYPAY_SECRET;
-      return {
-        url: "https://api.lofypay.com/v1/transactions", // CONFIRMAR na doc
+    async create({ valor, descricao, pagador }) {
+      const r = await fetch("https://app.lofypay.com/api/v1/gateway", {
+        method: "POST",
         headers: {
-          // CONFIRMAR: LofyPay usa Bearer com a sk_live (troque para Basic se a doc pedir)
-          Authorization: `Bearer ${secret}`,
+          Authorization: `Bearer ${process.env.LOFYPAY_SECRET}`,
           "Content-Type": "application/json",
         },
-        body: {
-          amount: centavos,
-          payment_method: "pix",
-          description: descricao || "Cobrança",
-          customer: pagador ? { name: pagador } : undefined,
-        },
+        body: JSON.stringify({
+          amount: Number(valor),
+          method: "pix",
+          external_reference: "CENTRALPAY-" + Date.now(),
+          client: { name: (pagador || "Cliente").slice(0, 80) },
+          ...(descricao ? { metadata: { order_id: descricao.slice(0, 60) } } : {}),
+        }),
+      });
+      const d = await r.json().catch(() => ({}));
+      const ok = r.ok && (d.status === "success" || d.status === "OK") && d.idTransaction;
+      if (!ok) {
+        return { ok: false, status: r.status, erro: d.message || d.error || "Gateway recusou", raw: d };
+      }
+      return {
+        ok: true,
+        id: d.idTransaction,
+        status: "aguardando pagamento",
+        code: d.paymentCode || null,      // Pix copia-e-cola
+        qr: d.paymentCodeBase64 || null,  // QR em base64 (opcional)
+        link: null,
+        raw: d,
       };
     },
-    parse: (d) => ({
-      id: d.id ?? d.transaction_id,
-      status: d.status,
-      qr: d.pix?.qr_code_base64 ?? d.qr_code_base64,
-      code: d.pix?.copy_paste ?? d.pix_code ?? d.emv,
-      link: d.checkout_url ?? d.payment_url,
-    }),
   },
 
   // ------------------------------------------------------------- Sharpify
+  //  POST https://api.sharpify.com.br/api/v1/checkout/payment-link/create
+  //  Headers x-sharpify-client-id / x-sharpify-client-secret. valor em REAIS.
+  //  Resposta: { data: PaymentLinkProps } com payment.gateway.data = {code,qrCode,paymentLink}
   sharpify: {
     envs: ["SHARPIFY_CLIENT_ID", "SHARPIFY_CLIENT_SECRET"],
-    build({ centavos, descricao }) {
-      const id = process.env.SHARPIFY_CLIENT_ID;
-      const secret = process.env.SHARPIFY_CLIENT_SECRET;
-      const basic = Buffer.from(`${id}:${secret}`).toString("base64");
-      return {
-        url: "https://api.sharpify.com.br/v1/payment-links", // CONFIRMAR na doc
+    async create({ valor, descricao }) {
+      const nome = (descricao || "Cobrança CentralPay").slice(0, 60);
+      const r = await fetch("https://api.sharpify.com.br/api/v1/checkout/payment-link/create", {
+        method: "POST",
         headers: {
-          // CONFIRMAR: se a doc exigir trocar client_id/secret por um token OAuth
-          // primeiro, a gente adiciona esse passo. Por ora, Basic auth.
-          Authorization: `Basic ${basic}`,
+          "x-sharpify-client-id": process.env.SHARPIFY_CLIENT_ID,
+          "x-sharpify-client-secret": process.env.SHARPIFY_CLIENT_SECRET,
           "Content-Type": "application/json",
         },
-        body: {
-          amount: centavos,
-          description: descricao || "Cobrança",
-          payment_method: "pix",
-        },
+        body: JSON.stringify({
+          name: nome,
+          description: descricao || undefined,
+          amount: Number(valor),
+          gatewayMethod: "PIX",
+        }),
+      });
+      const d = await r.json().catch(() => ({}));
+      const pp = d.data;
+      if (!r.ok || !pp) {
+        return { ok: false, status: r.status, erro: d.message || d.error || "Gateway recusou", raw: d };
+      }
+      const gw = (pp.payment && pp.payment.gateway && pp.payment.gateway.data) || {};
+      return {
+        ok: true,
+        id: pp.id,
+        status: pp.status || "PENDING",
+        code: gw.code || null,          // Pix copia-e-cola
+        qr: gw.qrCode || null,          // QR (base64 ou url)
+        link: gw.paymentLink || null,   // link de checkout
+        raw: pp,
       };
     },
-    parse: (d) => ({
-      id: d.id,
-      status: d.status,
-      qr: d.pix?.qr_code_base64,
-      code: d.pix?.copy_paste ?? d.pix?.code,
-      link: d.url ?? d.payment_url ?? d.checkout_url,
-    }),
   },
 };
 
@@ -76,22 +96,16 @@ export default async function handler(req, res) {
 
   const { gateway, valor, descricao, pagador } = req.body || {};
   const adapter = ADAPTERS[gateway];
-  if (!adapter) return res.status(400).json({ erro: "Gateway não integrada" });
+  if (!adapter) return res.status(400).json({ erro: "Gateway não integrada (use lofypay ou sharpify)" });
 
   const faltando = adapter.envs.filter((e) => !process.env[e]);
-  if (faltando.length) {
-    return res.status(400).json({ erro: `Configure na Vercel: ${faltando.join(", ")}` });
-  }
-
-  const centavos = Math.round((Number(valor) || 0) * 100);
-  if (centavos <= 0) return res.status(400).json({ erro: "Valor inválido" });
+  if (faltando.length) return res.status(400).json({ erro: `Configure na Vercel: ${faltando.join(", ")}` });
+  if (!(Number(valor) > 0)) return res.status(400).json({ erro: "Valor inválido" });
 
   try {
-    const { url, headers, body } = adapter.build({ centavos, descricao, pagador });
-    const r = await fetch(url, { method: "POST", headers, body: JSON.stringify(body) });
-    const data = await r.json().catch(() => ({}));
-    if (!r.ok) return res.status(502).json({ erro: "Gateway recusou", status: r.status, detalhe: data });
-    return res.status(200).json({ ok: true, ...adapter.parse(data), raw: data });
+    const out = await adapter.create({ valor, descricao, pagador });
+    if (!out.ok) return res.status(502).json({ erro: out.erro, detalhe: out.raw });
+    return res.status(200).json(out);
   } catch (e) {
     return res.status(500).json({ erro: "Falha ao contatar a gateway", detalhe: String(e) });
   }

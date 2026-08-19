@@ -175,6 +175,7 @@ function renderGerar() {
         </div>
         <div class="field"><label>Valor da cobrança (R$)</label><input id="pgValor" type="number" min="0" step="0.01" placeholder="0,00" oninput="calcGerar()"></div>
         <div class="field"><label>Descrição (opcional)</label><input id="pgDesc" placeholder="Ex.: Desenvolvimento de site institucional"></div>
+        <div class="field"><label>Cliente (opcional)</label><input id="pgCliente" placeholder="Nome do pagador — ajuda na conciliação/MED"></div>
         <button class="btn block" onclick="gerarPagamento()">Gerar cobrança</button>
       </div>
       <div class="card glow">
@@ -216,13 +217,14 @@ async function gerarPagamento() {
   if (val <= 0) return alert("Digite o valor da cobrança.");
   const g = gwById(gwSel);
   const desc = document.getElementById("pgDesc").value.trim();
+  const cliente = document.getElementById("pgCliente").value.trim();
   const box = document.getElementById("pgResult");
   box.innerHTML = `<div class="card"><p class="muted center" style="padding:16px 0">Gerando cobrança na ${g.nome}…</p></div>`;
   try {
     const r = await fetch("/api/gerar", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ gateway: g.id, valor: val, descricao: desc }),
+      body: JSON.stringify({ gateway: g.id, valor: val, descricao: desc, pagador: cliente }),
     });
     const d = await r.json();
     if (!r.ok || d.erro) {
@@ -233,7 +235,7 @@ async function gerarPagamento() {
     box.innerHTML = `<div class="card glow">
       <div class="section-title" style="margin:0 0 10px"><h2 style="font-size:15px">✅ Cobrança gerada — ${g.nome}</h2><span class="gtag">${d.id || ""}</span></div>
       ${d.code ? `<div class="field"><label>Pix copia-e-cola</label><input readonly value="${d.code}" onclick="this.select()"></div>` : ""}
-      ${d.qr ? `<div class="center"><img alt="QR" src="${d.qr.startsWith("data:") ? d.qr : "data:image/png;base64," + d.qr}" style="max-width:200px;border-radius:12px"></div>` : ""}
+      ${d.qr ? `<div class="center"><img alt="QR" src="${/^(https?:|data:)/.test(d.qr) ? d.qr : "data:image/png;base64," + d.qr}" style="max-width:200px;border-radius:12px;background:#fff;padding:8px"></div>` : ""}
       ${d.link ? `<a class="btn block" href="${d.link}" target="_blank" rel="noopener">Abrir link de pagamento</a>` : ""}
       <p class="note">Mande isso ao cliente. Status: <b>${d.status || "aguardando"}</b>.</p>
     </div>`;
