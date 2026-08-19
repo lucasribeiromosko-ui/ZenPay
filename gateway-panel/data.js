@@ -1,34 +1,98 @@
 // ============================================================================
-//  Dados de DEMONSTRAÇÃO.
-//  Quando você conectar as gateways de verdade (via /api), estes valores
-//  serão substituídos pelas respostas reais das APIs. Ver README.
+//  CentralPay — armazenamento REAL (sem dados fictícios).
+//
+//  Guarda no navegador (localStorage) apenas o que VOCÊ realmente fez pelo
+//  painel: cobranças geradas e saques solicitados. O saldo e as estatísticas
+//  são CALCULADOS a partir dessas movimentações reais — nada é inventado.
+//
+//  Uma cobrança só entra no "saldo disponível" depois de ser confirmada como
+//  paga (botão "Verificar status" ou "Atualizar status", que chamam /api/status).
 // ============================================================================
-const DEMO = {
-  saldoDisponivel: 8421.57,
-  saldoPendente: 1290.00,
-  entrouMes: 14730.90,
-  saiuMes: 6120.00,
-  vendasMes: 38,
+const STORE_KEY = "centralpay_dados_v1";
 
-  // faturamento dos últimos 14 dias (para o gráfico)
-  faturamento: [210, 340, 180, 520, 610, 430, 700, 560, 880, 640, 910, 1020, 760, 1180],
+function _load() {
+  try {
+    const d = JSON.parse(localStorage.getItem(STORE_KEY));
+    if (d && Array.isArray(d.movimentos) && Array.isArray(d.saques)) return d;
+  } catch (e) {}
+  return { movimentos: [], saques: [] };
+}
+function _save(d) { localStorage.setItem(STORE_KEY, JSON.stringify(d)); }
 
-  // pagamentos recentes
-  pagamentos: [
-    { id: "TX-10293", data: "2026-08-19 14:22", pagador: "Empresa Alpha LTDA", gateway: "lofypay",  valor: 1200.00, status: "pago" },
-    { id: "TX-10292", data: "2026-08-19 11:07", pagador: "João P. (MEI)",       gateway: "sharpify", valor: 350.00,  status: "pago" },
-    { id: "TX-10291", data: "2026-08-18 19:41", pagador: "Studio Beta",         gateway: "sharpify", valor: 2400.00, status: "pago" },
-    { id: "TX-10290", data: "2026-08-18 16:15", pagador: "Marina Souza",        gateway: "lofypay",  valor: 180.00,  status: "med" },
-    { id: "TX-10289", data: "2026-08-18 09:58", pagador: "Loja Gamma",          gateway: "lofypay",  valor: 890.00,  status: "pago" },
-    { id: "TX-10288", data: "2026-08-17 22:03", pagador: "Delta Servicos",      gateway: "sharpify", valor: 1500.00, status: "pago" },
-    { id: "TX-10287", data: "2026-08-17 15:30", pagador: "Pedro Almeida",       gateway: "lofypay",  valor: 260.00,  status: "pendente" },
-    { id: "TX-10286", data: "2026-08-16 12:44", pagador: "Agência Zeta",        gateway: "sharpify", valor: 3200.00, status: "pago" },
-  ],
+const _mesAtual = () => new Date().toISOString().slice(0, 7);   // "2026-08"
+const _hoje = () => new Date().toISOString().slice(0, 10);      // "2026-08-19"
 
-  saques: [
-    { id: "SQ-402", data: "2026-08-15", valor: 3000.00, status: "pago" },
-    { id: "SQ-401", data: "2026-08-08", valor: 2500.00, status: "pago" },
-  ],
+const DB = {
+  movimentos() { return _load().movimentos; },
+  saques() { return _load().saques; },
+
+  addMovimento(m) {
+    const d = _load();
+    d.movimentos.unshift(m);
+    _save(d);
+  },
+  patchMovimento(id, patch) {
+    const d = _load();
+    const m = d.movimentos.find((x) => x.id === id);
+    if (m) { Object.assign(m, patch); _save(d); }
+    return m;
+  },
+  addSaque(s) {
+    const d = _load();
+    d.saques.unshift(s);
+    _save(d);
+  },
+
+  // Métricas reais derivadas das movimentações.
+  metrics() {
+    const d = _load();
+    const mes = _mesAtual();
+    let saldoDisponivel = 0, saldoPendente = 0, entrouMes = 0, vendasMes = 0, meds = 0;
+
+    for (const m of d.movimentos) {
+      const g = (typeof gwById === "function") ? gwById(m.gateway) : null;
+      const liq = g ? calcularTaxas(g, m.valor).liquidoRecebido : m.valor;
+      if (m.status === "pago") {
+        saldoDisponivel += liq;
+        if ((m.data || "").slice(0, 7) === mes) { entrouMes += m.valor; vendasMes++; }
+      } else if (m.status === "pendente" || m.status === "aguardando pagamento") {
+        saldoPendente += liq;
+      } else if (m.status === "med") {
+        meds++;
+      }
+    }
+
+    let saiuMes = 0;
+    for (const s of d.saques) {
+      saldoDisponivel -= Number(s.valor) || 0;
+      if ((s.data || "").slice(0, 7) === mes) saiuMes += Number(s.valor) || 0;
+    }
+
+    // Faturamento (recebido pago) por dia — últimos 14 dias.
+    const dias = [];
+    const base = new Date();
+    for (let i = 13; i >= 0; i--) {
+      const dt = new Date(base); dt.setDate(base.getDate() - i);
+      dias.push(dt.toISOString().slice(0, 10));
+    }
+    const faturamento = dias.map((dia) =>
+      d.movimentos
+        .filter((m) => m.status === "pago" && (m.data || "").slice(0, 10) === dia)
+        .reduce((s, m) => s + (Number(m.valor) || 0), 0)
+    );
+
+    const totalGerados = d.movimentos.length;
+    const pagos = d.movimentos.filter((m) => m.status === "pago").length;
+    const aprovacao = totalGerados ? Math.round((pagos / totalGerados) * 100) : 0;
+
+    return {
+      saldoDisponivel: Math.max(0, saldoDisponivel),
+      saldoPendente,
+      entrouMes, saiuMes, vendasMes, meds,
+      faturamento, totalGerados, pagos, aprovacao,
+      temDados: totalGerados > 0 || d.saques.length > 0,
+    };
+  },
 };
 
-if (typeof module !== "undefined") module.exports = { DEMO };
+if (typeof module !== "undefined") module.exports = { DB };

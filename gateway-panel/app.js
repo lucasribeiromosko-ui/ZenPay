@@ -76,21 +76,29 @@ const statusBadge = (s) => `<span class="badge ${s}">${({ pago: "Pago", pendente
 
 // ============================================================ TELA: INÍCIO
 function renderInicio() {
+  const m = DB.metrics();
+  const movs = DB.movimentos();
+  const temPendentes = movs.some((x) => x.status === "pendente" || x.status === "aguardando pagamento");
   view().innerHTML = `
     <div class="grid cols-4">
-      ${statCard("◈", "Saldo disponível", DEMO.saldoDisponivel, "+ pronto para saque", "up", true)}
-      ${statCard("↗", "Entrou (mês)", DEMO.entrouMes, "▲ este mês", "up")}
-      ${statCard("↙", "Saiu (mês)", DEMO.saiuMes, "▼ saques + taxas", "down")}
-      ${statCard("✦", "Vendas (mês)", DEMO.vendasMes, "pagamentos aprovados", "up", false, false)}
+      ${statCard("◈", "Saldo disponível", m.saldoDisponivel, "confirmado e pronto p/ saque", "up", true)}
+      ${statCard("↗", "Entrou (mês)", m.entrouMes, "vendas pagas no mês", "up")}
+      ${statCard("↙", "Saiu (mês)", m.saiuMes, "saques solicitados", "down")}
+      ${statCard("✦", "Vendas (mês)", m.vendasMes, "pagamentos confirmados", "up", false, false)}
     </div>
-    <div class="section-title"><h2>Faturamento — últimos 14 dias</h2><span class="hint">demonstração</span></div>
-    <div class="card">${chartSVG(DEMO.faturamento)}<div class="legend"><span class="li">Recebido por dia</span></div></div>
-    <div class="section-title"><h2>Pagamentos recentes</h2><a data-route="estatisticas" class="hint">ver todos →</a></div>
-    <div class="table-wrap"><table>
-      <thead><tr><th>ID</th><th>Pagador</th><th>Gateway</th><th class="num">Valor</th><th>Status</th></tr></thead>
-      <tbody>${DEMO.pagamentos.slice(0, 5).map(rowPag).join("")}</tbody>
-    </table></div>`;
+    <div class="section-title"><h2>Faturamento — últimos 14 dias</h2>
+      ${temPendentes ? `<button class="btn ghost" style="padding:7px 12px;font-size:13px" onclick="atualizarTodos(this)">↻ Atualizar status</button>` : `<span class="hint">recebido por dia</span>`}
+    </div>
+    <div class="card">${chartSVG(m.faturamento)}<div class="legend"><span class="li">Recebido por dia (pago)</span></div></div>
+    <div class="section-title"><h2>Pagamentos recentes</h2>${movs.length ? `<a data-route="estatisticas" class="hint">ver todos →</a>` : ""}</div>
+    ${movs.length ? `<div class="table-wrap"><table>
+      <thead><tr><th>ID</th><th>Descrição / Cliente</th><th>Gateway</th><th class="num">Valor</th><th>Status</th></tr></thead>
+      <tbody>${movs.slice(0, 6).map(rowPag).join("")}</tbody>
+    </table></div>` : emptyState("Nenhuma cobrança ainda", "Gere sua primeira cobrança em <b>Gerar pagamento</b>. O que você criar aparece aqui — com dados reais.", "gerar", "＋ Gerar pagamento")}`;
   runCountUps();
+}
+function emptyState(titulo, texto, rota, btn) {
+  return `<div class="card empty"><div class="empty-ic">◇</div><h3>${titulo}</h3><p>${texto}</p>${rota ? `<button class="btn" data-route="${rota}">${btn}</button>` : ""}</div>`;
 }
 function statCard(ic, label, val, delta, dir, glow = false, isMoney = true) {
   return `<div class="card stat ${glow ? "glow" : ""}"><div class="ic">${ic}</div>
@@ -98,38 +106,53 @@ function statCard(ic, label, val, delta, dir, glow = false, isMoney = true) {
     <div class="value" data-to="${val}" data-money="${isMoney ? 1 : 0}">${isMoney ? "R$ 0,00" : "0"}</div>
     <div class="delta ${dir}">${delta}</div></div>`;
 }
+function statusKey(s) {
+  const t = String(s || "").toLowerCase();
+  if (/pago|paid|approved/.test(t)) return "pago";
+  if (/med|contest|charge|refund/.test(t)) return "med";
+  if (/cancel|expир|expired|falh|fail/.test(t)) return "cancelado";
+  return "pendente";
+}
+function idCurto(id) { const s = String(id || "—"); return s.length > 14 ? s.slice(0, 6) + "…" + s.slice(-4) : s; }
 function rowPag(p) {
   const g = gwById(p.gateway);
-  return `<tr><td class="gtag">${p.id}</td><td>${p.pagador}</td>
+  const desc = p.descricao || p.pagador || "—";
+  return `<tr><td class="gtag" title="${p.id || ""}">${idCurto(p.id)}</td><td>${desc}</td>
     <td><span class="gdot" style="background:${g.cor}"></span>${g.nome}</td>
-    <td class="num">${money(p.valor)}</td><td>${statusBadge(p.status)}</td></tr>`;
+    <td class="num">${money(p.valor)}</td><td>${statusBadge(statusKey(p.status))}</td></tr>`;
 }
 
 // ====================================================== TELA: ESTATÍSTICAS
 function renderEstatisticas() {
+  const m = DB.metrics();
+  const movs = DB.movimentos();
+  const ticket = m.pagos ? m.entrouMes / (m.vendasMes || m.pagos) : 0;
   view().innerHTML = `
     <div class="grid cols-3">
-      ${statCard("◎", "Ticket médio", DEMO.entrouMes / DEMO.vendasMes, "por venda", "up")}
-      <div class="card stat"><div class="label">Aprovação</div><div class="value" data-to="92" data-money="0">0</div><div class="delta up">% pagos / gerados</div></div>
-      <div class="card stat"><div class="label">MEDs no período</div><div class="value" data-to="${DEMO.pagamentos.filter(p => p.status === "med").length}" data-money="0">0</div><div class="delta down">contestações</div></div>
+      ${statCard("◎", "Ticket médio", ticket, "por venda paga", "up")}
+      <div class="card stat"><div class="label">Aprovação</div><div class="value" data-to="${m.aprovacao}" data-money="0">0</div><div class="delta up">% pagos / gerados</div></div>
+      <div class="card stat"><div class="label">Contestações (MED)</div><div class="value" data-to="${m.meds}" data-money="0">0</div><div class="delta down">no período</div></div>
     </div>
-    <div class="section-title"><h2>Consultar pagador</h2><span class="hint">nome ou ID</span></div>
-    <div class="card"><div class="field" style="margin:0"><input id="busca" placeholder="Ex.: Empresa Alpha, TX-10293…" oninput="filtrarPag()"></div></div>
+    <div class="section-title"><h2>Consultar cobrança</h2><span class="hint">descrição, cliente ou ID</span></div>
+    <div class="card"><div class="field" style="margin:0"><input id="busca" placeholder="Ex.: Pedido #1, ID da transação…" oninput="filtrarPag()"></div></div>
     <div class="section-title"><h2>Histórico de pagamentos</h2>
       <select id="periodo" onchange="filtrarPag()" style="background:var(--surface-2);color:var(--text);border:1px solid var(--border);padding:8px 12px;border-radius:10px;font-size:13px">
         <option value="all">Todo o período</option><option value="hoje">Hoje</option><option value="7">Últimos 7 dias</option></select>
     </div>
-    <div class="table-wrap"><table>
-      <thead><tr><th>ID</th><th>Data</th><th>Pagador</th><th>Gateway</th><th class="num">Valor</th><th>Status</th></tr></thead>
-      <tbody id="tb">${DEMO.pagamentos.map(rowPagFull).join("")}</tbody></table></div>`;
+    ${movs.length ? `<div class="table-wrap"><table>
+      <thead><tr><th>ID</th><th>Data</th><th>Descrição / Cliente</th><th>Gateway</th><th class="num">Valor</th><th>Status</th></tr></thead>
+      <tbody id="tb">${movs.map(rowPagFull).join("")}</tbody></table></div>`
+      : emptyState("Sem pagamentos no histórico", "Assim que você gerar cobranças, elas aparecem aqui com dados reais.", "gerar", "＋ Gerar pagamento")}`;
   runCountUps();
 }
 function rowPagFull(p) {
   const g = gwById(p.gateway);
-  return `<tr data-n="${p.pagador.toLowerCase()}" data-i="${p.id.toLowerCase()}" data-d="${p.data}">
-    <td class="gtag">${p.id}</td><td class="muted">${p.data}</td><td>${p.pagador}</td>
+  const desc = (p.descricao || p.pagador || "—");
+  const dia = (p.data || "").slice(0, 10);
+  return `<tr data-n="${desc.toLowerCase()}" data-i="${String(p.id || "").toLowerCase()}" data-d="${dia}">
+    <td class="gtag" title="${p.id || ""}">${idCurto(p.id)}</td><td class="muted">${dia || "—"}</td><td>${desc}</td>
     <td><span class="gdot" style="background:${g.cor}"></span>${g.nome}</td>
-    <td class="num">${money(p.valor)}</td><td>${statusBadge(p.status)}</td></tr>`;
+    <td class="num">${money(p.valor)}</td><td>${statusBadge(statusKey(p.status))}</td></tr>`;
 }
 function filtrarPag() {
   const q = (document.getElementById("busca")?.value || "").toLowerCase().trim();
@@ -137,18 +160,22 @@ function filtrarPag() {
   view().querySelectorAll("#tb tr").forEach((tr) => {
     const okT = !q || tr.dataset.n.includes(q) || tr.dataset.i.includes(q);
     let okP = true;
-    if (per === "hoje") okP = tr.dataset.d.startsWith("2026-08-19");
-    else if (per === "7") okP = tr.dataset.d >= "2026-08-13";
+    const hoje = new Date().toISOString().slice(0, 10);
+    const seteAtras = new Date(Date.now() - 6 * 864e5).toISOString().slice(0, 10);
+    if (per === "hoje") okP = tr.dataset.d === hoje;
+    else if (per === "7") okP = tr.dataset.d >= seteAtras;
     tr.style.display = okT && okP ? "" : "none";
   });
 }
 
 // =========================================================== TELA: CARTEIRA
 function renderCarteira() {
+  const m = DB.metrics();
+  const saques = DB.saques();
   view().innerHTML = `
     <div class="grid cols-2">
-      ${statCard("◈", "Saldo disponível", DEMO.saldoDisponivel, "liberado para saque", "up", true)}
-      ${statCard("◷", "Saldo pendente", DEMO.saldoPendente, "aguardando liberação", "down")}
+      ${statCard("◈", "Saldo disponível", m.saldoDisponivel, "confirmado (pago) − saques", "up", true)}
+      ${statCard("◷", "Saldo pendente", m.saldoPendente, "cobranças ainda não pagas", "down")}
     </div>
     <div class="section-title"><h2>Solicitar saque</h2></div>
     <div class="grid cols-2">
@@ -168,8 +195,9 @@ function renderCarteira() {
       </div>
     </div>
     <div class="section-title"><h2>Histórico de saques</h2></div>
-    <div class="table-wrap"><table><thead><tr><th>ID</th><th>Data</th><th class="num">Valor</th><th>Status</th></tr></thead>
-      <tbody>${DEMO.saques.map(s => `<tr><td class="gtag">${s.id}</td><td class="muted">${s.data}</td><td class="num">${money(s.valor)}</td><td>${statusBadge(s.status)}</td></tr>`).join("")}</tbody></table></div>`;
+    ${saques.length ? `<div class="table-wrap"><table><thead><tr><th>ID</th><th>Data</th><th class="num">Valor</th><th>Status</th></tr></thead>
+      <tbody>${saques.map(s => `<tr><td class="gtag" title="${s.id || ""}">${idCurto(s.id)}</td><td class="muted">${(s.data || "").slice(0,10)}</td><td class="num">${money(s.valor)}</td><td>${statusBadge(statusKey(s.status))}</td></tr>`).join("")}</tbody></table></div>`
+      : `<div class="card"><p class="muted center" style="padding:20px 0">Nenhum saque solicitado ainda.</p></div>`}`;
   runCountUps();
 }
 function calcSaque() {
@@ -194,8 +222,13 @@ async function pedirSaque() {
     cpf: document.getElementById("sqCpf").value.trim(),
   });
   btn.disabled = false; btn.textContent = "Solicitar saque";
-  if (ok) toast("Saque solicitado ✅", "ok", `ID ${d.id || ""} • ${d.status || "processando"}`);
-  else toast("Não foi possível sacar", "err", d.erro || "Verifique a chave de acesso e as configs.");
+  if (ok) {
+    DB.addSaque({ id: d.id || ("SAQ-" + Date.now()), gateway: g, valor: val, keypix: pix, status: d.status || "processando", data: new Date().toISOString() });
+    toast("Saque solicitado ✅", "ok", `${money(val)} • ${d.status || "processando"}`);
+    renderCarteira();
+  } else {
+    toast("Não foi possível sacar", "err", d.erro || "Verifique a chave de acesso e as configs.");
+  }
 }
 
 // ==================================================== TELA: GERAR PAGAMENTO
@@ -274,6 +307,13 @@ async function gerarPagamento() {
     box.innerHTML = "";
     return toast("Não foi possível gerar", "err", d.erro || "Verifique a chave de acesso e as configs da Vercel.");
   }
+  DB.addMovimento({
+    id: d.id || ("TX-" + Date.now()), gateway: g.id, valor: val,
+    descricao: document.getElementById("pgDesc").value.trim(),
+    pagador: document.getElementById("pgCliente").value.trim(),
+    status: "pendente", code: d.code || null, link: d.link || null,
+    data: new Date().toISOString(),
+  });
   toast("Cobrança gerada ✅", "ok", `${g.nome} • ${money(val)}`);
   box.innerHTML = `<div class="card glow">
     <div class="section-title" style="margin:0 0 16px"><h2 style="font-size:16px">✅ Cobrança gerada — ${g.nome}</h2><span class="gtag">${d.id || ""}</span></div>
@@ -295,10 +335,28 @@ function copyPix() {
 }
 async function verificarStatus(gateway, id) {
   if (!id) return;
-  const el = document.getElementById("stStatus"); el.innerHTML = `<span class="spinner" style="display:inline-block;width:12px;height:12px"></span> consultando…`;
+  const el = document.getElementById("stStatus");
+  if (el) el.innerHTML = `<span class="spinner" style="display:inline-block;width:12px;height:12px"></span> consultando…`;
   const { ok, d } = await api("/api/status", { gateway, id });
-  el.innerHTML = ok ? `Status: <b>${d.status || "?"}</b>` : `Status: <b>—</b>`;
-  if (ok && /pa(id|go)|approved|paid_out/i.test(d.status || "")) toast("Pagamento confirmado! 🎉", "ok");
+  if (el) el.innerHTML = ok ? `Status: <b>${d.status || "?"}</b>` : `Status: <b>—</b>`;
+  if (ok && d.status) {
+    DB.patchMovimento(id, { status: statusKey(d.status) });
+    if (/pa(id|go)|approved|paid_out/i.test(d.status)) toast("Pagamento confirmado! 🎉", "ok", "Saldo atualizado.");
+  }
+  return ok ? statusKey(d.status) : null;
+}
+// Atualiza o status de todas as cobranças pendentes de uma vez.
+async function atualizarTodos(btn) {
+  const pend = DB.movimentos().filter((x) => x.status === "pendente" || x.status === "aguardando pagamento");
+  if (!pend.length) return toast("Nada pendente", "", "Não há cobranças aguardando confirmação.");
+  if (btn) { btn.disabled = true; btn.innerHTML = `<span class="spinner"></span> Atualizando…`; }
+  let confirmados = 0;
+  for (const m of pend) {
+    const s = await verificarStatus(m.gateway, m.id);
+    if (s === "pago") confirmados++;
+  }
+  toast("Status atualizado", "ok", confirmados ? `${confirmados} pagamento(s) confirmado(s).` : "Nenhuma mudança.");
+  renderInicio();
 }
 
 // ========================================================= TELA: API & DOCS
