@@ -192,6 +192,10 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .gw-limits .chip{font-size:10.5px;font-family:var(--mono);color:#c9b6ff;background:rgba(139,92,246,.1);border:1px solid rgba(139,92,246,.24);padding:2px 8px;border-radius:20px}
 .brow.warn{color:#ffca7a}
 .brow.warn .k{color:#ffca7a;font-weight:600}
+.card.empty{text-align:center;padding:44px 22px}
+.card.empty .empty-ic{font-size:34px;color:var(--purple);opacity:.7;margin-bottom:8px}
+.card.empty h3{font-size:17px;margin:0 0 6px}
+.card.empty p{color:var(--muted);font-size:13.5px;max-width:420px;margin:0 auto 16px;line-height:1.55}
 
 .btn{
   display:inline-flex;align-items:center;gap:9px;justify-content:center;
