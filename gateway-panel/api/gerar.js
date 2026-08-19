@@ -9,7 +9,10 @@
 //    LOFYPAY_SECRET            (sk_live_… da LofyPay)
 //    SHARPIFY_CLIENT_ID        (x-sharpify-client-id)
 //    SHARPIFY_CLIENT_SECRET    (x-sharpify-client-secret)
+//    CENTRALPAY_API_KEY        (chave que o seu Python/painel envia em x-api-key)
 // ============================================================================
+
+import { autorizado } from "./_auth.js";
 
 const ADAPTERS = {
   // ------------------------------------------------------------- LofyPay
@@ -93,6 +96,7 @@ const ADAPTERS = {
 
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ erro: "Use POST" });
+  if (!autorizado(req, res)) return;
 
   const { gateway, valor, descricao, pagador } = req.body || {};
   const adapter = ADAPTERS[gateway];
