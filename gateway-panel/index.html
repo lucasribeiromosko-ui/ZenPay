@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CentralPay — Painel</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <div class="logo">C</div>
+        <div><b>CentralPay</b><span>Gateway Panel</span></div>
+      </div>
+      <a class="nav-item active" data-route="inicio"><span class="ic">◆</span> Início</a>
+      <a class="nav-item" data-route="estatisticas"><span class="ic">▚</span> Estatísticas</a>
+      <a class="nav-item" data-route="carteira"><span class="ic">◈</span> Carteira</a>
+      <a class="nav-item" data-route="gerar"><span class="ic">＋</span> Gerar pagamento</a>
+      <div class="spacer"></div>
+      <div class="foot">v1 • dados de demonstração</div>
+    </aside>
+
+    <main class="main">
+      <div class="topbar">
+        <div>
+          <button class="btn ghost mobile-only" id="menuBtn" style="padding:8px 12px">☰</button>
+          <h1 id="pageTitle">Início</h1>
+          <div class="sub" id="pageSub">Visão geral da sua operação</div>
+        </div>
+        <div class="pill">🟢 Operacional</div>
+      </div>
+      <div id="view"></div>
+    </main>
+  </div>
+
+  <script src="gateways.js"></script>
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
