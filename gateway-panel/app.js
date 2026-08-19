@@ -1,5 +1,5 @@
 // ============================================================================
-//  NoxPay — lógica do painel (frontend). Usa dados de DEMO.
+//  CentralPay — lógica do painel (frontend). Usa dados de DEMO.
 //  Para gerar pagamentos/saques de verdade, o frontend chama /api/* (serverless
 //  na Vercel), que fala com cada gateway usando a CHAVE SECRETA em variável de
 //  ambiente. Nunca coloque chave secreta neste arquivo. Ver README.
@@ -182,6 +182,7 @@ function renderGerar() {
         <div class="breakdown" id="pgBreak"></div>
       </div>
     </div>
+    <div id="pgResult" style="margin-top:16px"></div>
     <p class="note">As taxas exibidas vêm de <code>gateways.js</code> — ajuste com os valores reais de cada gateway. A cobrança de verdade é criada pela API da gateway escolhida (serverless <code>/api/gerar</code>).</p>`;
   selGw(gwSel);
 }
@@ -210,11 +211,35 @@ function calcGerar() {
     <div class="brow neg"><span class="k">Taxa de saque estimada (${g.taxaSaque}% + ${money(g.taxaSaqueFixa)})</span><span class="v">- ${money(t.taxaSaque)}</span></div>
     <div class="brow total"><span class="k">Líquido final (após sacar)</span><span class="v">${money(t.liquidoFinal)}</span></div>`;
 }
-function gerarPagamento() {
+async function gerarPagamento() {
   const val = parseFloat(document.getElementById("pgValor").value) || 0;
   if (val <= 0) return alert("Digite o valor da cobrança.");
   const g = gwById(gwSel);
-  alert(`✅ Cobrança de ${money(val)} gerada via ${g.nome} (simulação).\n\nNa versão conectada, o /api/gerar chama a API da ${g.nome} e retorna o QR Code / código Pix real para você mandar ao cliente.`);
+  const desc = document.getElementById("pgDesc").value.trim();
+  const box = document.getElementById("pgResult");
+  box.innerHTML = `<div class="card"><p class="muted center" style="padding:16px 0">Gerando cobrança na ${g.nome}…</p></div>`;
+  try {
+    const r = await fetch("/api/gerar", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ gateway: g.id, valor: val, descricao: desc }),
+    });
+    const d = await r.json();
+    if (!r.ok || d.erro) {
+      box.innerHTML = `<div class="card"><div class="brow neg"><span class="k">⚠️ ${d.erro || "Falha ao gerar"}</span></div>
+        <p class="note">${d.detalhe ? "Detalhe: <code>" + JSON.stringify(d.detalhe).slice(0, 200) + "</code>" : "Configure as chaves da " + g.nome + " nas Environment Variables da Vercel."}</p></div>`;
+      return;
+    }
+    box.innerHTML = `<div class="card glow">
+      <div class="section-title" style="margin:0 0 10px"><h2 style="font-size:15px">✅ Cobrança gerada — ${g.nome}</h2><span class="gtag">${d.id || ""}</span></div>
+      ${d.code ? `<div class="field"><label>Pix copia-e-cola</label><input readonly value="${d.code}" onclick="this.select()"></div>` : ""}
+      ${d.qr ? `<div class="center"><img alt="QR" src="${d.qr.startsWith("data:") ? d.qr : "data:image/png;base64," + d.qr}" style="max-width:200px;border-radius:12px"></div>` : ""}
+      ${d.link ? `<a class="btn block" href="${d.link}" target="_blank" rel="noopener">Abrir link de pagamento</a>` : ""}
+      <p class="note">Mande isso ao cliente. Status: <b>${d.status || "aguardando"}</b>.</p>
+    </div>`;
+  } catch (e) {
+    box.innerHTML = `<div class="card"><div class="brow neg"><span class="k">⚠️ Erro de conexão</span></div><p class="note">${e}</p></div>`;
+  }
 }
 
 // ------------------------------------------------------------------- router

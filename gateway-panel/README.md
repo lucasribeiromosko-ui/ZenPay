@@ -1,4 +1,4 @@
-# 🖤💜 NoxPay — Painel de Gateways
+# 🖤💜 CentralPay — Painel de Gateways
 
 Painel de pagamentos com tema **preto meia-noite + roxo** para vender
 **sites, produtos digitais e serviços**. Mostra estatísticas, saldo, carteira/saque
