@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+  <div id="toasts"></div>
   <div class="app">
     <aside class="sidebar" id="sidebar">
       <div class="brand">
@@ -17,18 +18,24 @@
       <a class="nav-item" data-route="estatisticas"><span class="ic">▚</span> Estatísticas</a>
       <a class="nav-item" data-route="carteira"><span class="ic">◈</span> Carteira</a>
       <a class="nav-item" data-route="gerar"><span class="ic">＋</span> Gerar pagamento</a>
+      <a class="nav-item" data-route="api"><span class="ic">⌘</span> API &amp; Docs</a>
       <div class="spacer"></div>
-      <div class="foot">v1 • dados de demonstração</div>
+      <div class="lock">
+        <label>🔒 Chave de acesso</label>
+        <input id="apiKeyInput" type="password" placeholder="CENTRALPAY_API_KEY" autocomplete="off">
+        <div class="st muted" id="apiKeySt">necessária para operações reais</div>
+      </div>
+      <div class="foot">v2 • painel real</div>
     </aside>
 
     <main class="main">
       <div class="topbar">
         <div>
-          <button class="btn ghost mobile-only" id="menuBtn" style="padding:8px 12px">☰</button>
+          <button class="btn ghost mobile-only" id="menuBtn" style="padding:8px 12px;margin-bottom:8px">☰</button>
           <h1 id="pageTitle">Início</h1>
           <div class="sub" id="pageSub">Visão geral da sua operação</div>
         </div>
-        <div class="pill">🟢 Operacional</div>
+        <div class="pill"><span class="dotlive"></span> Operacional</div>
       </div>
       <div id="view"></div>
     </main>
