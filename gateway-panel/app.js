@@ -255,7 +255,7 @@ function renderGerar() {
 function gwCard(g) {
   const limites = [];
   if (g.min) limites.push(`mín. ${money(g.min)}`);
-  if (g.limiteDiario) limites.push(`até ${money(g.limiteDiario)}/dia`);
+  if (g.limiteDiario) limites.push(`até ${money(g.limiteDiario)} por cobrança`);
   return `<div class="gw ${g.id === gwSel ? "sel" : ""}" data-id="${g.id}" onclick="selGw('${g.id}')">
     <span class="gw-check">✓</span>
     <div class="gw-head"><span class="dot" style="background:${g.cor}"></span><span class="nome">${g.nome}</span><span class="prazo">⚡ ${g.prazo}</span></div>

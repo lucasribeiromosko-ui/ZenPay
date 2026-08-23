@@ -21,7 +21,7 @@ const GATEWAYS = [
     taxaSaqueFixa: 2.00,     // R$2,00 por saque
     prazo: "Na hora",
     min: 3.00,               // valor mínimo R$3,00
-    limiteDiario: 500.00,    // limite diário R$500,00
+    limiteDiario: 1000000,   // limite por cobrança: R$1.000.000
     liquidacao: "100% automático — cai na hora",
     metodos: ["Pix"],
     resumoReceber: "1% + R$0,40",
@@ -63,7 +63,7 @@ function validarValor(gateway, valorBruto) {
   if (gateway.min && v < gateway.min)
     return `${gateway.nome}: valor mínimo é ${money(gateway.min)}.`;
   if (gateway.limiteDiario && v > gateway.limiteDiario)
-    return `${gateway.nome}: limite por transação/dia é ${money(gateway.limiteDiario)}.`;
+    return `${gateway.nome}: limite por cobrança é ${money(gateway.limiteDiario)}.`;
   return null;
 }
 
