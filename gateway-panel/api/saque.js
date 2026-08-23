@@ -8,14 +8,16 @@
 
 import { autorizado } from "./_auth.js";
 
-// Detecta o tipo de chave Pix a partir do formato.
+// Detecta o tipo de chave Pix. Valores conforme docs LofyPay (MAIÚSCULO):
+// CPF · CNPJ · EMAIL · TELEFONE · EVP (aleatória).
 function tipoChave(k) {
   const v = String(k || "").trim();
-  if (/^\d{11}$/.test(v)) return "cpf";
-  if (/^\d{14}$/.test(v)) return "cnpj";
-  if (/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v)) return "email";
-  if (/^\+?\d{10,13}$/.test(v.replace(/\D/g, "")) && v.replace(/\D/g, "").length >= 10) return "phone";
-  return "random";
+  const dig = v.replace(/\D/g, "");
+  if (/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v)) return "EMAIL";
+  if (/^\d{11}$/.test(dig) && dig === v.replace(/[.\-]/g, "")) return "CPF";
+  if (/^\d{14}$/.test(dig)) return "CNPJ";
+  if (/^\+?\d{10,13}$/.test(dig) && dig.length >= 10 && dig.length <= 13) return "TELEFONE";
+  return "EVP"; // chave aleatória
 }
 
 const ADAPTERS = {
@@ -41,9 +43,10 @@ const ADAPTERS = {
         }),
       });
       const d = await r.json().catch(() => ({}));
-      const ok = r.ok && (d.status === "success" || d.status === "OK" || d.idTransaction);
-      if (!ok) return { ok: false, status: r.status, erro: d.message || d.error || "Saque recusado", raw: d };
-      return { ok: true, id: d.idTransaction || d.id || null, status: d.status || "processando", raw: d };
+      // docs LofyPay: sucesso = d.success === true (200); id = withdrawalId; status = PROCESSING/PENDING_REVIEW…
+      const ok = d.success === true || (r.ok && (d.withdrawalId || d.id));
+      if (!ok) return { ok: false, status: r.status, erro: d.message || `${d.code || "Saque recusado"}`, raw: d };
+      return { ok: true, id: d.withdrawalId || d.id || null, status: d.status || "PROCESSING", raw: d };
     },
   },
 };
