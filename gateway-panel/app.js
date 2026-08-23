@@ -410,18 +410,56 @@ function getLofys() { try { return JSON.parse(localStorage.getItem(LOFY_KEY)) ||
 function saveLofys(arr) { localStorage.setItem(LOFY_KEY, JSON.stringify(arr)); pushContas(arr); }
 
 // --- sincronização na nuvem (compartilhada com o sócio) ---
-let _syncOn = false; // vira true se o servidor tiver sync configurado
-async function pushContas(arr) {
-  const { ok } = await api("/api/contas", { contas: arr });
-  _syncOn = ok || _syncOn;
+let _syncOn = false; // vira true quando o servidor tem sync (KV) configurado
+async function pushSync(store, data) {
+  const { ok } = await api("/api/sync", { store, data });
+  if (ok) _syncOn = true;
+  return ok;
 }
+async function pullSync(store) {
+  const { ok, d } = await api("/api/sync", { store });
+  if (ok) _syncOn = true;
+  return { ok, data: ok ? d.data : null };
+}
+
+// contas Lofy
+async function pushContas(arr) { pushSync("contas", arr); }
 async function pullContas() {
-  const { ok, d } = await api("/api/contas", {});
-  if (ok && Array.isArray(d.contas)) {
-    _syncOn = true;
-    localStorage.setItem(LOFY_KEY, JSON.stringify(d.contas));
-    if ((location.hash || "").replace("#", "") === "lofys") renderLofys(true); // re-render sem puxar de novo
+  const { ok, data } = await pullSync("contas");
+  if (ok && Array.isArray(data)) {
+    localStorage.setItem(LOFY_KEY, JSON.stringify(data));
+    if (currentRoute === "lofys") renderLofys(true);
   }
+}
+
+// histórico (movimentos + saques) — merge por id pra não sobrescrever o do sócio
+function mergeById(local, remote) {
+  const map = {};
+  (remote || []).forEach((x) => { if (x && x.id) map[x.id] = x; });
+  (local || []).forEach((x) => {
+    if (!x || !x.id) return;
+    const ex = map[x.id];
+    if (!ex) map[x.id] = x;
+    else if (x.status === "pago" && ex.status !== "pago") map[x.id] = x; // mantém o "pago"
+  });
+  return Object.values(map);
+}
+async function pushDados(d) { pushSync("dados", d || DB.snapshot()); }
+async function pullDados() {
+  const { ok, data } = await pullSync("dados");
+  if (!ok || !data) return;
+  const local = DB.snapshot();
+  const merged = {
+    movimentos: mergeById(local.movimentos, data.movimentos || []),
+    saques: mergeById(local.saques, data.saques || []),
+  };
+  DB.hydrate(merged);
+  // se o merge acrescentou algo que não estava no servidor, devolve a união
+  if (merged.movimentos.length > (data.movimentos || []).length ||
+      merged.saques.length > (data.saques || []).length) {
+    pushSync("dados", merged);
+  }
+  rerenderCurrent();
 }
 function lofyById(id) { return getLofys().find((c) => c.id === id); }
 const maskKey = (k) => { const s = String(k || ""); return s.length > 8 ? s.slice(0, 4) + "••••" + s.slice(-4) : "••••"; };
@@ -579,12 +617,16 @@ async function sacarLofy(id) {
 }
 
 // ------------------------------------------------------------------- router
+const RENDERERS = { inicio: renderInicio, estatisticas: renderEstatisticas, carteira: renderCarteira, gerar: renderGerar, lofys: renderLofys, api: renderApi };
+let currentRoute = "inicio";
+function rerenderCurrent() { (RENDERERS[currentRoute] || renderInicio)(true); }
 function go(route) {
   route = PAGES[route] ? route : "inicio";
+  currentRoute = route;
   document.querySelectorAll(".nav-item").forEach((n) => n.classList.toggle("active", n.dataset.route === route));
   document.getElementById("pageTitle").textContent = PAGES[route].title;
   document.getElementById("pageSub").textContent = PAGES[route].sub;
-  ({ inicio: renderInicio, estatisticas: renderEstatisticas, carteira: renderCarteira, gerar: renderGerar, lofys: renderLofys, api: renderApi }[route])();
+  RENDERERS[route]();
   document.getElementById("sidebar").classList.remove("open");
   location.hash = route;
 }
@@ -650,7 +692,8 @@ function iniciarApp() {
     document.getElementById("apiKeySt").textContent = keyInput.value.trim() ? "✅ chave salva" : "necessária para operações reais";
   });
   go((location.hash || "#inicio").slice(1));
-  pullContas(); // sincroniza as contas compartilhadas assim que entra
+  pullContas(); // sincroniza as contas compartilhadas
+  pullDados();  // sincroniza o histórico compartilhado
 }
 
 // ponto de entrada: exige login antes de abrir o painel
