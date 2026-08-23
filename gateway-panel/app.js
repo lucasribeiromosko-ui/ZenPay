@@ -576,13 +576,64 @@ document.addEventListener("click", (e) => {
   if (e.target.id === "menuBtn") document.getElementById("sidebar").classList.toggle("open");
 });
 
-// chave de acesso (localStorage)
-const keyInput = document.getElementById("apiKeyInput");
-keyInput.value = getKey();
-document.getElementById("apiKeySt").textContent = getKey() ? "✅ chave salva" : "necessária para operações reais";
-keyInput.addEventListener("input", () => {
-  localStorage.setItem("centralpay_key", keyInput.value.trim());
-  document.getElementById("apiKeySt").textContent = keyInput.value.trim() ? "✅ chave salva" : "necessária para operações reais";
-});
+// ============================================================ LOGIN (trava)
+//  ATENÇÃO: isto é uma trava só do NAVEGADOR (frontend). A senha fica visível
+//  no código, então NÃO é segurança de verdade — serve pra impedir acesso
+//  casual ao painel. A proteção real das operações é a CENTRALPAY_API_KEY,
+//  validada no servidor (x-api-key) nas funções /api.
+const AUTH_USER = "Lucas";
+const AUTH_PASS = "lucas0";
+const AUTH_FLAG = "centralpay_auth";
+const estaLogado = () => { try { return localStorage.getItem(AUTH_FLAG) === "1"; } catch (e) { return false; } };
 
-go((location.hash || "#inicio").slice(1));
+function mostrarLogin() {
+  document.querySelector(".app").style.display = "none";
+  const ov = document.createElement("div");
+  ov.className = "login-screen"; ov.id = "loginScreen";
+  ov.innerHTML = `
+    <form class="login-box" onsubmit="return fazerLogin(event)">
+      <div class="login-logo">C</div>
+      <h1>CentralPay</h1>
+      <p class="muted" style="margin:0 0 18px">Entre para acessar o painel</p>
+      <div class="field"><label>Usuário</label><input id="logUser" autocomplete="username" placeholder="Usuário"></div>
+      <div class="field"><label>Senha</label><input id="logPass" type="password" autocomplete="current-password" placeholder="Senha"></div>
+      <button class="btn block" type="submit">Entrar</button>
+      <div class="login-err" id="logErr"></div>
+    </form>`;
+  document.body.appendChild(ov);
+  setTimeout(() => document.getElementById("logUser")?.focus(), 60);
+}
+function fazerLogin(e) {
+  e.preventDefault();
+  const u = document.getElementById("logUser").value.trim();
+  const p = document.getElementById("logPass").value;
+  if (u === AUTH_USER && p === AUTH_PASS) {
+    try { localStorage.setItem(AUTH_FLAG, "1"); } catch (er) {}
+    document.getElementById("loginScreen")?.remove();
+    document.querySelector(".app").style.display = "";
+    iniciarApp();
+  } else {
+    document.getElementById("logErr").textContent = "Usuário ou senha incorretos.";
+    document.getElementById("logPass").value = "";
+  }
+  return false;
+}
+function logout() {
+  try { localStorage.removeItem(AUTH_FLAG); } catch (e) {}
+  location.reload();
+}
+
+function iniciarApp() {
+  const keyInput = document.getElementById("apiKeyInput");
+  keyInput.value = getKey();
+  document.getElementById("apiKeySt").textContent = getKey() ? "✅ chave salva" : "necessária para operações reais";
+  keyInput.addEventListener("input", () => {
+    localStorage.setItem("centralpay_key", keyInput.value.trim());
+    document.getElementById("apiKeySt").textContent = keyInput.value.trim() ? "✅ chave salva" : "necessária para operações reais";
+  });
+  go((location.hash || "#inicio").slice(1));
+}
+
+// ponto de entrada: exige login antes de abrir o painel
+if (estaLogado()) iniciarApp();
+else mostrarLogin();
