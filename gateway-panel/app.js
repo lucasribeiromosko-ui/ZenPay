@@ -474,12 +474,6 @@ async function pullDados() {
 }
 function lofyById(id) { return getLofys().find((c) => c.id === id); }
 const maskKey = (k) => { const s = String(k || ""); return s.length > 8 ? s.slice(0, 4) + "••••" + s.slice(-4) : "••••"; };
-
-// cache dos saldos consultados (por conta), no navegador
-const SALDO_KEY = "centralpay_saldos";
-function getSaldos() { try { return JSON.parse(localStorage.getItem(SALDO_KEY)) || {}; } catch (e) { return {}; } }
-function setSaldo(id, valor) { const s = getSaldos(); s[id] = { valor, ts: Date.now() }; localStorage.setItem(SALDO_KEY, JSON.stringify(s)); }
-function saldoDe(id) { const s = getSaldos()[id]; return s ? s.valor : null; }
 const esc = (s) => String(s || "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
 const LIMITE_POR_CONTA = 500; // R$ por conta
@@ -537,17 +531,7 @@ function lofyCard(c) {
     <div class="lofy-logo">L</div>
     <div class="lofy-nome">${esc(c.nome)}</div>
     <div class="lofy-key">${maskKey(c.key1)}</div>
-    ${lofySaldoLinha(c.id)}
     <div class="lofy-open">Gerar cobrança &nbsp;•&nbsp; Sacar &nbsp;→</div>
-  </div>`;
-}
-function lofySaldoLinha(id) {
-  const s = saldoDe(id);
-  if (s == null)
-    return `<button class="saldo-btn" onclick="event.stopPropagation();consultarSaldo('${id}')">💰 Consultar saldo</button>`;
-  return `<div class="saldo-box">
-    <span class="saldo-val">${money(s)}</span>
-    <button class="saldo-refresh" title="Atualizar saldo" onclick="event.stopPropagation();consultarSaldo('${id}')">↻</button>
   </div>`;
 }
 
@@ -672,28 +656,11 @@ async function sacarLofy(id) {
   else toast("Não foi possível sacar", "err", d.erro || "Confira a Secret Key da conta.");
 }
 
-// consulta o saldo de uma conta LofyPay (via /api/saldo, usando a secret dela)
-async function consultarSaldo(id, opts) {
-  opts = opts || {};
-  const c = lofyById(id); if (!c) return false;
-  const { ok, d } = await api("/api/saldo", { gateway: "lofypay", secret: c.key1 });
-  if (ok && d.saldo != null) { setSaldo(id, Number(d.saldo)); }
-  else if (!opts.silent) { toast("Não consegui o saldo", "err", (d && d.erro) || "Confira a Secret Key da conta."); }
-  if (!opts.noRender && currentRoute === "lofys") renderLofys(true);
-  return ok;
-}
-// atualiza o saldo de TODAS as contas de uma vez
-async function atualizarSaldos() {
-  const contas = getLofys();
-  await Promise.all(contas.map((c) => consultarSaldo(c.id, { silent: true, noRender: true })));
-  if (currentRoute === "lofys") renderLofys(true);
-}
-// botão ↻ Atualizar: re-sincroniza e atualiza todos os saldos
+// botão ↻ Atualizar: re-sincroniza contas + histórico com a nuvem
 async function atualizarPainel(btn) {
   if (btn) { btn.disabled = true; btn.innerHTML = `<span class="spinner"></span> Atualizando…`; }
   await pullContas();
   await pullDados();
-  await atualizarSaldos();
   toast("Painel atualizado", "ok");
 }
 
