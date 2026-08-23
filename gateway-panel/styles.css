@@ -204,12 +204,18 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
   box-shadow:0 8px 20px -8px var(--glow)}
 .lofy-nome{font-weight:700;font-size:16px;margin-bottom:4px}
 .lofy-key{font-family:var(--mono);font-size:12px;color:var(--faint);letter-spacing:.5px}
-.lofy-open{margin-top:14px;font-size:13px;font-weight:600;color:#c9b6ff;opacity:0;transform:translateX(-4px);transition:.2s}
-.lofy-card:hover .lofy-open{opacity:1;transform:translateX(0)}
-.lofy-del{position:absolute;top:12px;right:12px;width:24px;height:24px;border-radius:8px;border:1px solid var(--border);
-  background:var(--surface);color:var(--faint);cursor:pointer;font-size:12px;line-height:1;opacity:0;transition:.2s}
-.lofy-card:hover .lofy-del{opacity:1}
-.lofy-del:hover{color:#ff9b9b;border-color:#7a2c2c}
+.lofy-open{margin-top:14px;font-size:12.5px;font-weight:700;color:#c9b6ff;background:rgba(139,92,246,.1);
+  border:1px solid rgba(139,92,246,.24);border-radius:20px;padding:5px 11px;display:inline-block;transition:.2s}
+.lofy-card:hover .lofy-open{background:rgba(139,92,246,.2);border-color:var(--purple)}
+.lofy-actions{position:absolute;top:12px;right:12px;display:flex;gap:6px}
+.lofy-ico{width:26px;height:26px;border-radius:8px;border:1px solid var(--border);background:var(--surface);
+  color:var(--muted);cursor:pointer;font-size:12px;line-height:1;transition:.15s;opacity:.55}
+.lofy-card:hover .lofy-ico{opacity:1}
+.lofy-ico:hover{color:#fff;border-color:var(--purple);background:var(--surface-2)}
+.lofy-ico.del:hover{color:#ff9b9b;border-color:#7a2c2c}
+.add-sub{font-size:11.5px;color:var(--faint);margin-top:3px}
+.peek{background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:0 12px;cursor:pointer;font-size:14px;color:var(--muted)}
+.peek:hover{color:var(--text)}
 .lofy-card.add{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
   border-style:dashed;background:transparent;color:var(--muted);min-height:150px}
 .lofy-card.add:hover{color:var(--text);border-color:var(--purple)}
