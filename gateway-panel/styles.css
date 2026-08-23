@@ -233,6 +233,14 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
   box-shadow:0 8px 20px -8px var(--glow)}
 .lofy-nome{font-weight:700;font-size:16px;margin-bottom:4px}
 .lofy-key{font-family:var(--mono);font-size:12px;color:var(--faint);letter-spacing:.5px}
+.saldo-btn{margin-top:12px;width:100%;background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.28);
+  color:#7ee2a8;border-radius:11px;padding:8px 10px;font-size:12.5px;font-weight:700;cursor:pointer;transition:.15s}
+.saldo-btn:hover{background:rgba(34,197,94,.16);border-color:#22c55e;color:#c7f9db}
+.saldo-box{margin-top:12px;display:flex;align-items:center;justify-content:space-between;gap:8px;
+  background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.28);border-radius:11px;padding:8px 12px}
+.saldo-val{font-size:18px;font-weight:800;color:#5ee08f;font-variant-numeric:tabular-nums}
+.saldo-refresh{background:transparent;border:0;color:#7ee2a8;cursor:pointer;font-size:15px;line-height:1;padding:2px 4px;border-radius:8px}
+.saldo-refresh:hover{background:rgba(34,197,94,.16);color:#c7f9db}
 .lofy-open{margin-top:14px;font-size:12.5px;font-weight:700;color:#c9b6ff;background:rgba(139,92,246,.1);
   border:1px solid rgba(139,92,246,.24);border-radius:20px;padding:5px 11px;display:inline-block;transition:.2s}
 .lofy-card:hover .lofy-open{background:rgba(139,92,246,.2);border-color:var(--purple)}
