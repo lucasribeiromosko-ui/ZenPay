@@ -407,15 +407,31 @@ print("Status:", s.get("status"))`.replace(/</g, "&lt;");
 //  é enviada por requisição pra função /api, que a usa pra falar com a LofyPay.
 const LOFY_KEY = "centralpay_lofys";
 function getLofys() { try { return JSON.parse(localStorage.getItem(LOFY_KEY)) || []; } catch (e) { return []; } }
-function saveLofys(arr) { localStorage.setItem(LOFY_KEY, JSON.stringify(arr)); }
+function saveLofys(arr) { localStorage.setItem(LOFY_KEY, JSON.stringify(arr)); pushContas(arr); }
+
+// --- sincronização na nuvem (compartilhada com o sócio) ---
+let _syncOn = false; // vira true se o servidor tiver sync configurado
+async function pushContas(arr) {
+  const { ok } = await api("/api/contas", { contas: arr });
+  _syncOn = ok || _syncOn;
+}
+async function pullContas() {
+  const { ok, d } = await api("/api/contas", {});
+  if (ok && Array.isArray(d.contas)) {
+    _syncOn = true;
+    localStorage.setItem(LOFY_KEY, JSON.stringify(d.contas));
+    if ((location.hash || "").replace("#", "") === "lofys") renderLofys(true); // re-render sem puxar de novo
+  }
+}
 function lofyById(id) { return getLofys().find((c) => c.id === id); }
 const maskKey = (k) => { const s = String(k || ""); return s.length > 8 ? s.slice(0, 4) + "••••" + s.slice(-4) : "••••"; };
 const esc = (s) => String(s || "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-function renderLofys() {
+function renderLofys(skipPull) {
   const contas = getLofys();
+  if (!skipPull) pullContas();   // busca a versão compartilhada e re-renderiza
   view().innerHTML = `
-    <div class="section-title"><h2>Suas contas LofyPay</h2><span class="hint">${contas.length} conta(s) • clique numa conta para gerar cobrança ou sacar</span></div>
+    <div class="section-title"><h2>Suas contas LofyPay</h2><span class="hint">${contas.length} conta(s) • ${_syncOn ? "☁️ sincronizado com o sócio" : "clique numa conta para gerar cobrança ou sacar"}</span></div>
     ${contas.length ? "" : `<p class="note" style="margin:0 0 14px">Você ainda não tem contas. Clique em <b>＋ Adicionar conta</b> e cole a Secret Key da sua LofyPay.</p>`}
     <div class="lofy-grid">
       ${contas.map(lofyCard).join("")}
@@ -424,7 +440,9 @@ function renderLofys() {
         <div class="add-sub">nome + Secret Key</div>
       </div>
     </div>
-    <p class="note" style="margin-top:18px">🔒 As chaves ficam só neste navegador (localStorage) — não sobem pro repositório. Não use em um PC compartilhado.</p>`;
+    <p class="note" style="margin-top:18px">${_syncOn
+      ? "☁️ As contas ficam salvas na nuvem e são compartilhadas — você e seu sócio veem as mesmas contas."
+      : "🔒 As chaves ficam neste navegador. Para compartilhar com seu sócio, ative a sincronização (KV) na Vercel — veja a aba API & Docs."}</p>`;
 }
 function lofyCard(c) {
   return `<div class="lofy-card" onclick="abrirLofy('${c.id}')" title="Abrir ${esc(c.nome)}">
@@ -632,6 +650,7 @@ function iniciarApp() {
     document.getElementById("apiKeySt").textContent = keyInput.value.trim() ? "✅ chave salva" : "necessária para operações reais";
   });
   go((location.hash || "#inicio").slice(1));
+  pullContas(); // sincroniza as contas compartilhadas assim que entra
 }
 
 // ponto de entrada: exige login antes de abrir o painel
