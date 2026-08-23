@@ -21,11 +21,14 @@ const ADAPTERS = {
   //  paymentCodeBase64? }. HTTP 200 pode conter { status:"error", message }.
   lofypay: {
     envs: ["LOFYPAY_SECRET"],
-    async create({ valor, descricao, pagador }) {
+    async create({ valor, descricao, pagador, secret }) {
+      // secret (opcional) vem do painel Central Lofy (conta selecionada);
+      // se não vier, usa a env var LOFYPAY_SECRET.
+      const token = secret || process.env.LOFYPAY_SECRET;
       const r = await fetch("https://app.lofypay.com/api/v1/gateway", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${process.env.LOFYPAY_SECRET}`,
+          Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -98,16 +101,17 @@ export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ erro: "Use POST" });
   if (!autorizado(req, res)) return;
 
-  const { gateway, valor, descricao, pagador } = req.body || {};
+  const { gateway, valor, descricao, pagador, secret } = req.body || {};
   const adapter = ADAPTERS[gateway];
   if (!adapter) return res.status(400).json({ erro: "Gateway não integrada (use lofypay ou sharpify)" });
 
-  const faltando = adapter.envs.filter((e) => !process.env[e]);
+  // Se o painel mandou uma secret (conta do Central Lofy), não exige a env var.
+  const faltando = secret ? [] : adapter.envs.filter((e) => !process.env[e]);
   if (faltando.length) return res.status(400).json({ erro: `Configure na Vercel: ${faltando.join(", ")}` });
   if (!(Number(valor) > 0)) return res.status(400).json({ erro: "Valor inválido" });
 
   try {
-    const out = await adapter.create({ valor, descricao, pagador });
+    const out = await adapter.create({ valor, descricao, pagador, secret });
     if (!out.ok) return res.status(502).json({ erro: out.erro, detalhe: out.raw });
 
     // Monta o link de pagamento HOSPEDADO NA CENTRALPAY (QR + copia-e-cola),

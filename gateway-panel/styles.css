@@ -192,6 +192,34 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .gw-limits .chip{font-size:10.5px;font-family:var(--mono);color:#c9b6ff;background:rgba(139,92,246,.1);border:1px solid rgba(139,92,246,.24);padding:2px 8px;border-radius:20px}
 .brow.warn{color:#ffca7a}
 .brow.warn .k{color:#ffca7a;font-weight:600}
+/* ---- Central Lofy: cards flutuantes ---- */
+.lofy-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px}
+.lofy-card{position:relative;background:linear-gradient(160deg,var(--surface-2),var(--surface));
+  border:1.5px solid var(--border);border-radius:18px;padding:20px;cursor:pointer;
+  transition:transform .22s var(--ease),box-shadow .22s var(--ease),border-color .22s;
+  animation:fadeUp .4s var(--ease) both}
+.lofy-card:hover{transform:translateY(-6px);border-color:var(--purple);box-shadow:0 22px 44px -20px var(--glow)}
+.lofy-logo{width:44px;height:44px;border-radius:13px;background:linear-gradient(145deg,#9168f7,#6d28d9);
+  display:flex;align-items:center;justify-content:center;font-weight:800;font-size:20px;color:#fff;margin-bottom:14px;
+  box-shadow:0 8px 20px -8px var(--glow)}
+.lofy-nome{font-weight:700;font-size:16px;margin-bottom:4px}
+.lofy-key{font-family:var(--mono);font-size:12px;color:var(--faint);letter-spacing:.5px}
+.lofy-open{margin-top:14px;font-size:13px;font-weight:600;color:#c9b6ff;opacity:0;transform:translateX(-4px);transition:.2s}
+.lofy-card:hover .lofy-open{opacity:1;transform:translateX(0)}
+.lofy-del{position:absolute;top:12px;right:12px;width:24px;height:24px;border-radius:8px;border:1px solid var(--border);
+  background:var(--surface);color:var(--faint);cursor:pointer;font-size:12px;line-height:1;opacity:0;transition:.2s}
+.lofy-card:hover .lofy-del{opacity:1}
+.lofy-del:hover{color:#ff9b9b;border-color:#7a2c2c}
+.lofy-card.add{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
+  border-style:dashed;background:transparent;color:var(--muted);min-height:150px}
+.lofy-card.add:hover{color:var(--text);border-color:var(--purple)}
+.lofy-card.add .plus{font-size:34px;color:var(--purple);line-height:1;margin-bottom:8px}
+.lofy-card.add .add-t{font-weight:600;font-size:14px}
+/* ---- modal ---- */
+.overlay{position:fixed;inset:0;background:rgba(6,4,12,.66);backdrop-filter:blur(4px);
+  display:flex;align-items:center;justify-content:center;padding:20px;z-index:60;animation:fadeUp .2s ease both}
+.modal{width:100%;max-width:440px;background:linear-gradient(180deg,var(--surface),var(--surface-2));
+  border:1px solid var(--border);border-radius:20px;padding:24px;box-shadow:0 40px 90px -30px #000;animation:popIn .25s var(--ease) both}
 .card.empty{text-align:center;padding:44px 22px}
 .card.empty .empty-ic{font-size:34px;color:var(--purple);opacity:.7;margin-bottom:8px}
 .card.empty h3{font-size:17px;margin:0 0 6px}
