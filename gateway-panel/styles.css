@@ -192,6 +192,19 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .gw-limits .chip{font-size:10.5px;font-family:var(--mono);color:#c9b6ff;background:rgba(139,92,246,.1);border:1px solid rgba(139,92,246,.24);padding:2px 8px;border-radius:20px}
 .brow.warn{color:#ffca7a}
 .brow.warn .k{color:#ffca7a;font-weight:600}
+/* ---- Login (trava de acesso) ---- */
+.login-screen{position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;padding:22px;
+  background:radial-gradient(800px 500px at 50% -10%,rgba(139,92,246,.2),transparent),var(--bg)}
+.login-box{width:100%;max-width:380px;background:linear-gradient(180deg,var(--surface),var(--surface-2));
+  border:1px solid var(--border);border-radius:22px;padding:32px 28px;text-align:center;
+  box-shadow:0 40px 90px -30px #000;animation:popIn .3s var(--ease) both}
+.login-logo{width:56px;height:56px;border-radius:16px;margin:0 auto 14px;
+  background:linear-gradient(145deg,#9168f7,#6d28d9);display:flex;align-items:center;justify-content:center;
+  font-weight:800;font-size:26px;color:#fff;box-shadow:0 12px 30px -10px var(--glow)}
+.login-box h1{font-size:22px;margin:0 0 4px}
+.login-box .field{text-align:left}
+.login-err{color:#ff9b9b;font-size:13px;margin-top:12px;min-height:16px}
+
 /* ---- Central Lofy: cards flutuantes ---- */
 .lofy-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px}
 .lofy-card{position:relative;background:linear-gradient(160deg,var(--surface-2),var(--surface));
