@@ -13,6 +13,7 @@ const PAGES = {
   carteira:     { title: "Carteira",         sub: "Saldo e saques" },
   gerar:        { title: "Gerar pagamento",  sub: "Escolha a gateway e veja as taxas" },
   lofys:        { title: "Central Lofy",      sub: "Suas contas LofyPay em um só lugar" },
+  cobrancas:    { title: "Cobranças Lofy",    sub: "Todas as cobranças das suas contas LofyPay" },
   api:          { title: "API & Docs",       sub: "Integre e teste em Python" },
 };
 
@@ -334,11 +335,13 @@ function copyPix() {
   const i = document.getElementById("pixCode"); i.select();
   navigator.clipboard?.writeText(i.value).then(() => toast("Copiado!", "ok", "Pix copia-e-cola na área de transferência.")).catch(() => {});
 }
-async function verificarStatus(gateway, id) {
+// secret da conta que criou a cobrança (Central Lofy) — necessário no /api/status
+function secretDoMov(m) { return m && m.conta ? (lofyById(m.conta) || {}).key1 : undefined; }
+async function verificarStatus(gateway, id, secret) {
   if (!id) return;
   const el = document.getElementById("stStatus");
   if (el) el.innerHTML = `<span class="spinner" style="display:inline-block;width:12px;height:12px"></span> consultando…`;
-  const { ok, d } = await api("/api/status", { gateway, id });
+  const { ok, d } = await api("/api/status", { gateway, id, secret });
   if (el) el.innerHTML = ok ? `Status: <b>${d.status || "?"}</b>` : `Status: <b>—</b>`;
   if (ok && d.status) {
     DB.patchMovimento(id, { status: statusKey(d.status) });
@@ -353,11 +356,52 @@ async function atualizarTodos(btn) {
   if (btn) { btn.disabled = true; btn.innerHTML = `<span class="spinner"></span> Atualizando…`; }
   let confirmados = 0;
   for (const m of pend) {
-    const s = await verificarStatus(m.gateway, m.id);
+    const s = await verificarStatus(m.gateway, m.id, secretDoMov(m));
     if (s === "pago") confirmados++;
   }
   toast("Status atualizado", "ok", confirmados ? `${confirmados} pagamento(s) confirmado(s).` : "Nenhuma mudança.");
   renderInicio();
+}
+
+// ====================================================== TELA: COBRANÇAS LOFY
+function renderCobrancasLofy() {
+  const movs = DB.movimentos().filter((m) => m.gateway === "lofypay");
+  const nomeConta = (m) => { const c = m.conta && lofyById(m.conta); return c ? c.nome : (m.pagador || "—"); };
+  const pend = movs.filter((m) => m.status === "pendente" || m.status === "aguardando pagamento").length;
+  view().innerHTML = `
+    <div class="section-title"><h2>Cobranças LofyPay</h2>
+      <div style="display:flex;gap:10px;align-items:center">
+        <span class="hint">${movs.length} cobrança(s)${pend ? ` • ${pend} pendente(s)` : ""}</span>
+        ${movs.length ? `<button class="btn ghost" style="padding:7px 12px;font-size:13px" onclick="atualizarCobrancas(this)">↻ Atualizar status</button>` : ""}
+      </div>
+    </div>
+    ${movs.length ? `<div class="table-wrap"><table>
+      <thead><tr><th>Conta</th><th>ID</th><th>Descrição</th><th>Data</th><th class="num">Valor</th><th>Status</th><th></th></tr></thead>
+      <tbody>${movs.map((m) => `<tr>
+        <td>${esc(nomeConta(m))}</td>
+        <td class="gtag" title="${m.id || ""}">${idCurto(m.id)}</td>
+        <td>${esc(m.descricao || "—")}</td>
+        <td class="muted">${(m.data || "").slice(0, 10)}</td>
+        <td class="num">${money(m.valor)}</td>
+        <td>${statusBadge(statusKey(m.status))}</td>
+        <td>${(m.status === "pendente" || m.status === "aguardando pagamento") ? `<button class="btn ghost" style="padding:6px 10px;font-size:12px" onclick="verCob('${m.id}')">Verificar</button>` : ""}</td>
+      </tr>`).join("")}</tbody>
+    </table></div>` : emptyState("Nenhuma cobrança LofyPay", "Gere cobranças na <b>Central Lofy</b> que elas aparecem aqui — com conta, status e valor.", "lofys", "◱ Ir para Central Lofy")}`;
+}
+async function verCob(id) {
+  const m = DB.movimentos().find((x) => x.id === id);
+  if (!m) return;
+  await verificarStatus(m.gateway, m.id, secretDoMov(m));
+  if (currentRoute === "cobrancas") renderCobrancasLofy();
+}
+async function atualizarCobrancas(btn) {
+  const pend = DB.movimentos().filter((m) => m.gateway === "lofypay" && (m.status === "pendente" || m.status === "aguardando pagamento"));
+  if (!pend.length) return toast("Nada pendente", "", "Nenhuma cobrança aguardando.");
+  if (btn) { btn.disabled = true; btn.innerHTML = `<span class="spinner"></span> Atualizando…`; }
+  let conf = 0;
+  for (const m of pend) { const s = await verificarStatus(m.gateway, m.id, secretDoMov(m)); if (s === "pago") conf++; }
+  toast("Status atualizado", "ok", conf ? `${conf} confirmada(s).` : "Nenhuma mudança.");
+  if (currentRoute === "cobrancas") renderCobrancasLofy();
 }
 
 // ========================================================= TELA: API & DOCS
@@ -474,6 +518,18 @@ async function pullDados() {
 }
 function lofyById(id) { return getLofys().find((c) => c.id === id); }
 const maskKey = (k) => { const s = String(k || ""); return s.length > 8 ? s.slice(0, 4) + "••••" + s.slice(-4) : "••••"; };
+
+// Saldo LOCAL estimado da conta: cobranças pagas − saques (atribuídos pela conta).
+// Cobrança gerada = 0; quando vira "pago", entra o valor dela.
+function saldoLocalConta(id) {
+  const recebido = DB.movimentos()
+    .filter((m) => m.conta === id && m.status === "pago")
+    .reduce((s, m) => s + (Number(m.valor) || 0), 0);
+  const sacado = DB.saques()
+    .filter((s) => s.conta === id)
+    .reduce((a, s) => a + (Number(s.valor) || 0), 0);
+  return Math.max(0, recebido - sacado);
+}
 const esc = (s) => String(s || "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
 const LIMITE_POR_CONTA = 500; // R$ por conta
@@ -531,6 +587,7 @@ function lofyCard(c) {
     <div class="lofy-logo">L</div>
     <div class="lofy-nome">${esc(c.nome)}</div>
     <div class="lofy-key">${maskKey(c.key1)}</div>
+    <div class="saldo-box"><span class="saldo-lbl">Saldo</span><span class="saldo-val">${money(saldoLocalConta(c.id))}</span></div>
     <div class="lofy-open">Gerar cobrança &nbsp;•&nbsp; Sacar &nbsp;→</div>
   </div>`;
 }
@@ -632,7 +689,7 @@ async function gerarLofy(id) {
   btn.disabled = false; btn.innerHTML = "⚡ Gerar cobrança";
   const box = document.getElementById("loGerarRes");
   if (!ok) { box.innerHTML = ""; return toast("Não deu certo", "err", d.erro || "Confira a Secret Key da conta."); }
-  DB.addMovimento({ id: d.id || ("TX-" + Date.now()), gateway: "lofypay", valor: val, descricao: document.getElementById("locDesc").value.trim(), pagador: c.nome, status: "pendente", code: d.code || null, data: new Date().toISOString() });
+  DB.addMovimento({ id: d.id || ("TX-" + Date.now()), gateway: "lofypay", conta: c.id, valor: val, descricao: document.getElementById("locDesc").value.trim(), pagador: c.nome, status: "pendente", code: d.code || null, data: new Date().toISOString() });
   toast("Cobrança gerada ✅", "ok", `${c.nome} • ${money(val)}`);
   box.innerHTML = `
     ${d.code ? `<div class="field" style="margin:0 0 10px"><label>Pix copia-e-cola</label><div class="copyrow"><input id="loPixCode" readonly value="${d.code}"><button class="btn ghost" onclick="copyLoPix()">Copiar</button></div></div>` : ""}
@@ -652,7 +709,7 @@ async function sacarLofy(id) {
     nome: document.getElementById("losNome").value.trim(), cpf: document.getElementById("losCpf").value.trim(),
   });
   btn.disabled = false; btn.textContent = "Solicitar saque";
-  if (ok) { DB.addSaque({ id: d.id || ("SAQ-" + Date.now()), gateway: "lofypay", valor: val, keypix: pix, status: d.status || "processando", data: new Date().toISOString() }); toast("Saque solicitado ✅", "ok", `${c.nome} • ${money(val)}`); document.getElementById("loSacarRes").innerHTML = `<p class="note" style="margin:0">Solicitado • ${d.status || "processando"}</p>`; }
+  if (ok) { DB.addSaque({ id: d.id || ("SAQ-" + Date.now()), gateway: "lofypay", conta: c.id, valor: val, keypix: pix, status: d.status || "processando", data: new Date().toISOString() }); toast("Saque solicitado ✅", "ok", `${c.nome} • ${money(val)}`); document.getElementById("loSacarRes").innerHTML = `<p class="note" style="margin:0">Solicitado • ${d.status || "processando"}</p>`; }
   else toast("Não foi possível sacar", "err", d.erro || "Confira a Secret Key da conta.");
 }
 
@@ -665,7 +722,7 @@ async function atualizarPainel(btn) {
 }
 
 // ------------------------------------------------------------------- router
-const RENDERERS = { inicio: renderInicio, estatisticas: renderEstatisticas, carteira: renderCarteira, gerar: renderGerar, lofys: renderLofys, api: renderApi };
+const RENDERERS = { inicio: renderInicio, estatisticas: renderEstatisticas, carteira: renderCarteira, gerar: renderGerar, lofys: renderLofys, cobrancas: renderCobrancasLofy, api: renderApi };
 let currentRoute = "inicio";
 function rerenderCurrent() { (RENDERERS[currentRoute] || renderInicio)(true); }
 function go(route) {
