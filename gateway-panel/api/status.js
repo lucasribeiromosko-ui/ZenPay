@@ -23,11 +23,12 @@ const ADAPTERS = {
   //  POST https://app.lofypay.com/api/v1/status   body { idtransaction }
   lofypay: {
     envs: ["LOFYPAY_SECRET"],
-    async check({ id }) {
+    async check({ id, secret }) {
+      const token = secret || process.env.LOFYPAY_SECRET;
       const r = await fetch("https://app.lofypay.com/api/v1/status", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${process.env.LOFYPAY_SECRET}`,
+          Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ idtransaction: id }),
@@ -65,16 +66,16 @@ export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ erro: "Use POST" });
   if (!autorizado(req, res)) return;
 
-  const { gateway, id } = req.body || {};
+  const { gateway, id, secret } = req.body || {};
   const adapter = ADAPTERS[gateway];
   if (!adapter) return res.status(400).json({ erro: "Gateway não integrada (use lofypay ou sharpify)" });
   if (!id) return res.status(400).json({ erro: "Informe o id do pagamento" });
 
-  const faltando = adapter.envs.filter((e) => !process.env[e]);
+  const faltando = secret ? [] : adapter.envs.filter((e) => !process.env[e]);
   if (faltando.length) return res.status(400).json({ erro: `Configure na Vercel: ${faltando.join(", ")}` });
 
   try {
-    const out = await adapter.check({ id });
+    const out = await adapter.check({ id, secret });
     if (!out.ok) return res.status(502).json({ erro: out.erro, detalhe: out.raw });
     return res.status(200).json(out);
   } catch (e) {
