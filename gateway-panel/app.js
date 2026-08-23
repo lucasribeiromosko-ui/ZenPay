@@ -426,9 +426,14 @@ async function pullSync(store) {
 async function pushContas(arr) { pushSync("contas", arr); }
 async function pullContas() {
   const { ok, data } = await pullSync("contas");
-  if (ok && Array.isArray(data)) {
+  if (!ok) return;
+  if (Array.isArray(data)) {
     localStorage.setItem(LOFY_KEY, JSON.stringify(data));
     if (currentRoute === "lofys") renderLofys(true);
+  } else {
+    // servidor nunca teve contas (null): sobe as locais nesta 1ª sincronização
+    const local = getLofys();
+    if (local.length) pushSync("contas", local);
   }
 }
 
@@ -447,7 +452,13 @@ function mergeById(local, remote) {
 async function pushDados(d) { pushSync("dados", d || DB.snapshot()); }
 async function pullDados() {
   const { ok, data } = await pullSync("dados");
-  if (!ok || !data) return;
+  if (!ok) return;
+  if (!data) {
+    // servidor nunca teve histórico: sobe o local nesta 1ª sincronização
+    const local = DB.snapshot();
+    if (local.movimentos.length || local.saques.length) pushSync("dados", local);
+    return;
+  }
   const local = DB.snapshot();
   const merged = {
     movimentos: mergeById(local.movimentos, data.movimentos || []),
