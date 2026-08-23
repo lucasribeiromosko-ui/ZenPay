@@ -12,6 +12,7 @@ const PAGES = {
   estatisticas: { title: "Estatísticas",     sub: "Histórico, pagadores e desempenho" },
   carteira:     { title: "Carteira",         sub: "Saldo e saques" },
   gerar:        { title: "Gerar pagamento",  sub: "Escolha a gateway e veja as taxas" },
+  lofys:        { title: "Central Lofy",      sub: "Suas contas LofyPay em um só lugar" },
   api:          { title: "API & Docs",       sub: "Integre e teste em Python" },
 };
 
@@ -400,13 +401,148 @@ s = requests.post(f"{BASE}/api/status",
 print("Status:", s.get("status"))`.replace(/</g, "&lt;");
 }
 
+// ====================================================== TELA: CENTRAL LOFY
+//  Gerenciador multi-conta LofyPay. As contas (nome + 2 secret keys) ficam
+//  SÓ no navegador (localStorage) — nunca no repositório. A chave selecionada
+//  é enviada por requisição pra função /api, que a usa pra falar com a LofyPay.
+const LOFY_KEY = "centralpay_lofys";
+function getLofys() { try { return JSON.parse(localStorage.getItem(LOFY_KEY)) || []; } catch (e) { return []; } }
+function saveLofys(arr) { localStorage.setItem(LOFY_KEY, JSON.stringify(arr)); }
+function lofyById(id) { return getLofys().find((c) => c.id === id); }
+const maskKey = (k) => { const s = String(k || ""); return s.length > 8 ? s.slice(0, 4) + "••••" + s.slice(-4) : "••••"; };
+
+function renderLofys() {
+  const contas = getLofys();
+  view().innerHTML = `
+    <div class="section-title"><h2>Suas contas LofyPay</h2><span class="hint">${contas.length} conta(s) • salvas só neste navegador</span></div>
+    <div class="lofy-grid">
+      ${contas.map(lofyCard).join("")}
+      <div class="lofy-card add" onclick="abrirAddLofy()">
+        <div class="plus">＋</div><div class="add-t">Adicionar conta</div>
+      </div>
+    </div>
+    <p class="note" style="margin-top:18px">🔒 As chaves ficam só neste navegador (localStorage) — não sobem pro repositório. Não use em um PC compartilhado.</p>`;
+}
+function lofyCard(c) {
+  return `<div class="lofy-card" onclick="abrirLofy('${c.id}')">
+    <button class="lofy-del" title="Remover" onclick="event.stopPropagation();removerLofy('${c.id}')">✕</button>
+    <div class="lofy-logo">L</div>
+    <div class="lofy-nome">${c.nome}</div>
+    <div class="lofy-key">${maskKey(c.key1)}</div>
+    <div class="lofy-open">Abrir conta →</div>
+  </div>`;
+}
+
+// ---- modal genérico ----
+function modal(html) {
+  fecharModal();
+  const ov = document.createElement("div");
+  ov.className = "overlay"; ov.id = "overlay";
+  ov.innerHTML = `<div class="modal">${html}</div>`;
+  ov.addEventListener("click", (e) => { if (e.target === ov) fecharModal(); });
+  document.body.appendChild(ov);
+}
+function fecharModal() { const o = document.getElementById("overlay"); if (o) o.remove(); }
+
+function abrirAddLofy() {
+  modal(`
+    <div class="section-title" style="margin:0 0 14px"><h2 style="font-size:17px">Adicionar conta LofyPay</h2></div>
+    <div class="field"><label>Nome da conta</label><input id="loNome" placeholder="Ex.: Loja 1 / Conta principal"></div>
+    <div class="field"><label>Secret Key (usada para gerar/sacar)</label><input id="loKey1" type="password" placeholder="sk_live_..." autocomplete="off"></div>
+    <div class="field"><label>Segunda key (opcional)</label><input id="loKey2" type="password" placeholder="chave secundária, se tiver" autocomplete="off"></div>
+    <div style="display:flex;gap:10px;margin-top:6px">
+      <button class="btn ghost" style="flex:1" onclick="fecharModal()">Cancelar</button>
+      <button class="btn" style="flex:1" onclick="salvarLofy()">Salvar conta</button>
+    </div>`);
+}
+function salvarLofy() {
+  const nome = document.getElementById("loNome").value.trim();
+  const key1 = document.getElementById("loKey1").value.trim();
+  const key2 = document.getElementById("loKey2").value.trim();
+  if (!nome) return toast("Falta o nome", "err", "Dê um nome pra identificar a conta.");
+  if (!key1) return toast("Falta a Secret Key", "err", "Cole a chave usada para gerar/sacar.");
+  const contas = getLofys();
+  contas.push({ id: "lofy_" + Math.random().toString(36).slice(2, 9), nome, key1, key2 });
+  saveLofys(contas);
+  fecharModal(); toast("Conta adicionada ✅", "ok", nome); renderLofys();
+}
+function removerLofy(id) {
+  const c = lofyById(id); if (!c) return;
+  if (!confirm(`Remover a conta "${c.nome}"? As chaves saem deste navegador.`)) return;
+  saveLofys(getLofys().filter((x) => x.id !== id));
+  toast("Conta removida", "", c.nome); renderLofys();
+}
+
+// ---- detalhe da conta: receber cobrança / sacar ----
+function abrirLofy(id) {
+  const c = lofyById(id); if (!c) return;
+  view().innerHTML = `
+    <div class="section-title"><h2><a class="hint" onclick="renderLofys()" style="cursor:pointer">← contas</a> &nbsp; ${c.nome}</h2><span class="gtag">LofyPay</span></div>
+    <div class="grid cols-2">
+      <div class="card">
+        <div class="section-title" style="margin:0 0 12px"><h2 style="font-size:15px">📥 Receber cobrança</h2></div>
+        <div class="field"><label>Valor (R$)</label><input id="locVal" type="number" min="0" step="0.01" placeholder="0,00"></div>
+        <div class="field"><label>Descrição (opcional)</label><input id="locDesc" placeholder="Ex.: Pedido #1"></div>
+        <button class="btn block" id="loGerarBtn" onclick="gerarLofy('${id}')">⚡ Gerar cobrança</button>
+        <div id="loGerarRes" style="margin-top:14px"></div>
+      </div>
+      <div class="card">
+        <div class="section-title" style="margin:0 0 12px"><h2 style="font-size:15px">🏦 Sacar</h2></div>
+        <div class="field"><label>Valor (R$)</label><input id="losVal" type="number" min="0" step="0.01" placeholder="0,00"></div>
+        <div class="field"><label>Chave Pix de destino</label><input id="losPix" placeholder="CPF / e-mail / telefone / aleatória"></div>
+        <div class="grid cols-2" style="gap:12px">
+          <div class="field"><label>Nome do titular</label><input id="losNome" placeholder="Nome completo"></div>
+          <div class="field"><label>CPF</label><input id="losCpf" placeholder="Só números"></div>
+        </div>
+        <button class="btn block" id="loSacarBtn" onclick="sacarLofy('${id}')">Solicitar saque</button>
+        <div id="loSacarRes" style="margin-top:14px"></div>
+      </div>
+    </div>`;
+}
+
+async function gerarLofy(id) {
+  const c = lofyById(id); if (!c) return;
+  const val = parseFloat(document.getElementById("locVal").value) || 0;
+  if (val <= 0) return toast("Valor inválido", "err", "Digite o valor da cobrança.");
+  const btn = document.getElementById("loGerarBtn"); btn.disabled = true; btn.innerHTML = `<span class="spinner"></span> Gerando…`;
+  const { ok, d } = await api("/api/gerar", {
+    gateway: "lofypay", valor: val, secret: c.key1,
+    descricao: document.getElementById("locDesc").value.trim(), pagador: c.nome,
+  });
+  btn.disabled = false; btn.innerHTML = "⚡ Gerar cobrança";
+  const box = document.getElementById("loGerarRes");
+  if (!ok) { box.innerHTML = ""; return toast("Não deu certo", "err", d.erro || "Confira a Secret Key da conta."); }
+  DB.addMovimento({ id: d.id || ("TX-" + Date.now()), gateway: "lofypay", valor: val, descricao: document.getElementById("locDesc").value.trim(), pagador: c.nome, status: "pendente", code: d.code || null, data: new Date().toISOString() });
+  toast("Cobrança gerada ✅", "ok", `${c.nome} • ${money(val)}`);
+  box.innerHTML = `
+    ${d.code ? `<div class="field" style="margin:0 0 10px"><label>Pix copia-e-cola</label><div class="copyrow"><input id="loPixCode" readonly value="${d.code}"><button class="btn ghost" onclick="copyLoPix()">Copiar</button></div></div>` : ""}
+    ${d.pay_url ? `<a class="btn block" href="${d.pay_url}" target="_blank" rel="noopener">Abrir página de pagamento</a>` : ""}`;
+}
+function copyLoPix() { const i = document.getElementById("loPixCode"); i.select(); navigator.clipboard?.writeText(i.value).then(() => toast("Copiado!", "ok")).catch(() => {}); }
+
+async function sacarLofy(id) {
+  const c = lofyById(id); if (!c) return;
+  const val = parseFloat(document.getElementById("losVal").value) || 0;
+  const pix = document.getElementById("losPix").value.trim();
+  if (val <= 0) return toast("Valor inválido", "err", "Digite o valor do saque.");
+  if (!pix) return toast("Falta a chave Pix", "err", "Informe a chave de destino.");
+  const btn = document.getElementById("loSacarBtn"); btn.disabled = true; btn.innerHTML = `<span class="spinner"></span> Processando…`;
+  const { ok, d } = await api("/api/saque", {
+    gateway: "lofypay", valor: val, keypix: pix, secret: c.key1,
+    nome: document.getElementById("losNome").value.trim(), cpf: document.getElementById("losCpf").value.trim(),
+  });
+  btn.disabled = false; btn.textContent = "Solicitar saque";
+  if (ok) { DB.addSaque({ id: d.id || ("SAQ-" + Date.now()), gateway: "lofypay", valor: val, keypix: pix, status: d.status || "processando", data: new Date().toISOString() }); toast("Saque solicitado ✅", "ok", `${c.nome} • ${money(val)}`); document.getElementById("loSacarRes").innerHTML = `<p class="note" style="margin:0">Solicitado • ${d.status || "processando"}</p>`; }
+  else toast("Não foi possível sacar", "err", d.erro || "Confira a Secret Key da conta.");
+}
+
 // ------------------------------------------------------------------- router
 function go(route) {
   route = PAGES[route] ? route : "inicio";
   document.querySelectorAll(".nav-item").forEach((n) => n.classList.toggle("active", n.dataset.route === route));
   document.getElementById("pageTitle").textContent = PAGES[route].title;
   document.getElementById("pageSub").textContent = PAGES[route].sub;
-  ({ inicio: renderInicio, estatisticas: renderEstatisticas, carteira: renderCarteira, gerar: renderGerar, api: renderApi }[route])();
+  ({ inicio: renderInicio, estatisticas: renderEstatisticas, carteira: renderCarteira, gerar: renderGerar, lofys: renderLofys, api: renderApi }[route])();
   document.getElementById("sidebar").classList.remove("open");
   location.hash = route;
 }
