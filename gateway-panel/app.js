@@ -476,10 +476,34 @@ function lofyById(id) { return getLofys().find((c) => c.id === id); }
 const maskKey = (k) => { const s = String(k || ""); return s.length > 8 ? s.slice(0, 4) + "••••" + s.slice(-4) : "••••"; };
 const esc = (s) => String(s || "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
+const LIMITE_POR_CONTA = 500; // R$ por conta
+function lofyCapBar(contas) {
+  const total = contas.length * LIMITE_POR_CONTA;
+  const hoje = new Date().toISOString().slice(0, 10);
+  const usado = DB.movimentos()
+    .filter((m) => m.gateway === "lofypay" && (m.data || "").slice(0, 10) === hoje)
+    .reduce((s, m) => s + (Number(m.valor) || 0), 0);
+  const pct = total ? Math.min(100, (usado / total) * 100) : 0;
+  const restante = Math.max(0, total - usado);
+  return `<div class="cap-card">
+    <div class="cap-head">
+      <div>
+        <div class="cap-label">Capacidade de movimentação hoje</div>
+        <div class="cap-total">${money(usado)} <span>/ ${money(total)}</span></div>
+      </div>
+      <div class="cap-side">
+        <div class="cap-meta">${contas.length} conta(s) × ${money(LIMITE_POR_CONTA)}</div>
+        <div class="cap-rest">${money(restante)} disponível</div>
+      </div>
+    </div>
+    <div class="cap-track"><div class="cap-fill" style="width:${pct}%"></div></div>
+  </div>`;
+}
 function renderLofys(skipPull) {
   const contas = getLofys();
   if (!skipPull) pullContas();   // busca a versão compartilhada e re-renderiza
   view().innerHTML = `
+    ${lofyCapBar(contas)}
     <div class="section-title"><h2>Suas contas LofyPay</h2><span class="hint">${contas.length} conta(s) • ${_syncOn ? "☁️ sincronizado com o sócio" : "clique numa conta para gerar cobrança ou sacar"}</span></div>
     ${contas.length ? "" : `<p class="note" style="margin:0 0 14px">Você ainda não tem contas. Clique em <b>＋ Adicionar conta</b> e cole a Secret Key da sua LofyPay.</p>`}
     <div class="lofy-grid">
