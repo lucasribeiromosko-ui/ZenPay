@@ -410,26 +410,32 @@ function getLofys() { try { return JSON.parse(localStorage.getItem(LOFY_KEY)) ||
 function saveLofys(arr) { localStorage.setItem(LOFY_KEY, JSON.stringify(arr)); }
 function lofyById(id) { return getLofys().find((c) => c.id === id); }
 const maskKey = (k) => { const s = String(k || ""); return s.length > 8 ? s.slice(0, 4) + "••••" + s.slice(-4) : "••••"; };
+const esc = (s) => String(s || "").replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
 function renderLofys() {
   const contas = getLofys();
   view().innerHTML = `
-    <div class="section-title"><h2>Suas contas LofyPay</h2><span class="hint">${contas.length} conta(s) • salvas só neste navegador</span></div>
+    <div class="section-title"><h2>Suas contas LofyPay</h2><span class="hint">${contas.length} conta(s) • clique numa conta para gerar cobrança ou sacar</span></div>
+    ${contas.length ? "" : `<p class="note" style="margin:0 0 14px">Você ainda não tem contas. Clique em <b>＋ Adicionar conta</b> e cole a Secret Key da sua LofyPay.</p>`}
     <div class="lofy-grid">
       ${contas.map(lofyCard).join("")}
-      <div class="lofy-card add" onclick="abrirAddLofy()">
+      <div class="lofy-card add" onclick="abrirFormLofy()">
         <div class="plus">＋</div><div class="add-t">Adicionar conta</div>
+        <div class="add-sub">nome + Secret Key</div>
       </div>
     </div>
     <p class="note" style="margin-top:18px">🔒 As chaves ficam só neste navegador (localStorage) — não sobem pro repositório. Não use em um PC compartilhado.</p>`;
 }
 function lofyCard(c) {
-  return `<div class="lofy-card" onclick="abrirLofy('${c.id}')">
-    <button class="lofy-del" title="Remover" onclick="event.stopPropagation();removerLofy('${c.id}')">✕</button>
+  return `<div class="lofy-card" onclick="abrirLofy('${c.id}')" title="Abrir ${esc(c.nome)}">
+    <div class="lofy-actions">
+      <button class="lofy-ico" title="Editar conta" onclick="event.stopPropagation();abrirFormLofy('${c.id}')">✎</button>
+      <button class="lofy-ico del" title="Remover conta" onclick="event.stopPropagation();removerLofy('${c.id}')">✕</button>
+    </div>
     <div class="lofy-logo">L</div>
-    <div class="lofy-nome">${c.nome}</div>
+    <div class="lofy-nome">${esc(c.nome)}</div>
     <div class="lofy-key">${maskKey(c.key1)}</div>
-    <div class="lofy-open">Abrir conta →</div>
+    <div class="lofy-open">Gerar cobrança &nbsp;•&nbsp; Sacar &nbsp;→</div>
   </div>`;
 }
 
@@ -444,27 +450,37 @@ function modal(html) {
 }
 function fecharModal() { const o = document.getElementById("overlay"); if (o) o.remove(); }
 
-function abrirAddLofy() {
+// Abre o formulário. Sem id = adicionar; com id = editar (campos pré-preenchidos).
+function abrirFormLofy(id) {
+  const editar = !!id;
+  const c = editar ? (lofyById(id) || {}) : {};
+  const btnToggle = `<button type="button" class="peek" onclick="const i=this.previousElementSibling;i.type=i.type==='password'?'text':'password';this.textContent=i.type==='password'?'👁':'🙈'">👁</button>`;
   modal(`
-    <div class="section-title" style="margin:0 0 14px"><h2 style="font-size:17px">Adicionar conta LofyPay</h2></div>
-    <div class="field"><label>Nome da conta</label><input id="loNome" placeholder="Ex.: Loja 1 / Conta principal"></div>
-    <div class="field"><label>Secret Key (usada para gerar/sacar)</label><input id="loKey1" type="password" placeholder="sk_live_..." autocomplete="off"></div>
-    <div class="field"><label>Segunda key (opcional)</label><input id="loKey2" type="password" placeholder="chave secundária, se tiver" autocomplete="off"></div>
+    <div class="section-title" style="margin:0 0 14px"><h2 style="font-size:17px">${editar ? "✎ Editar conta" : "＋ Adicionar conta LofyPay"}</h2></div>
+    <div class="field"><label>Nome da conta</label><input id="loNome" value="${esc(c.nome)}" placeholder="Ex.: Loja 1 / Conta principal"></div>
+    <div class="field"><label>Secret Key (usada para gerar/sacar)</label><div class="copyrow"><input id="loKey1" type="password" value="${esc(c.key1)}" placeholder="sk_live_..." autocomplete="off">${btnToggle}</div></div>
+    <div class="field"><label>Segunda key (opcional)</label><div class="copyrow"><input id="loKey2" type="password" value="${esc(c.key2)}" placeholder="chave secundária, se tiver" autocomplete="off">${btnToggle}</div></div>
     <div style="display:flex;gap:10px;margin-top:6px">
       <button class="btn ghost" style="flex:1" onclick="fecharModal()">Cancelar</button>
-      <button class="btn" style="flex:1" onclick="salvarLofy()">Salvar conta</button>
+      <button class="btn" style="flex:1" onclick="salvarLofy('${id || ""}')">${editar ? "Salvar alterações" : "Salvar conta"}</button>
     </div>`);
+  setTimeout(() => document.getElementById("loNome")?.focus(), 60);
 }
-function salvarLofy() {
+function salvarLofy(id) {
   const nome = document.getElementById("loNome").value.trim();
   const key1 = document.getElementById("loKey1").value.trim();
   const key2 = document.getElementById("loKey2").value.trim();
   if (!nome) return toast("Falta o nome", "err", "Dê um nome pra identificar a conta.");
   if (!key1) return toast("Falta a Secret Key", "err", "Cole a chave usada para gerar/sacar.");
   const contas = getLofys();
-  contas.push({ id: "lofy_" + Math.random().toString(36).slice(2, 9), nome, key1, key2 });
-  saveLofys(contas);
-  fecharModal(); toast("Conta adicionada ✅", "ok", nome); renderLofys();
+  if (id) {
+    const c = contas.find((x) => x.id === id);
+    if (c) { c.nome = nome; c.key1 = key1; c.key2 = key2; }
+    saveLofys(contas); fecharModal(); toast("Conta atualizada ✅", "ok", nome); renderLofys();
+  } else {
+    contas.push({ id: "lofy_" + Math.random().toString(36).slice(2, 9), nome, key1, key2 });
+    saveLofys(contas); fecharModal(); toast("Conta adicionada ✅", "ok", nome); renderLofys();
+  }
 }
 function removerLofy(id) {
   const c = lofyById(id); if (!c) return;
@@ -477,7 +493,15 @@ function removerLofy(id) {
 function abrirLofy(id) {
   const c = lofyById(id); if (!c) return;
   view().innerHTML = `
-    <div class="section-title"><h2><a class="hint" onclick="renderLofys()" style="cursor:pointer">← contas</a> &nbsp; ${c.nome}</h2><span class="gtag">LofyPay</span></div>
+    <button class="btn ghost" onclick="renderLofys()" style="padding:8px 14px;margin-bottom:14px">← Voltar às contas</button>
+    <div class="card" style="display:flex;align-items:center;gap:14px;margin-bottom:16px">
+      <div class="lofy-logo" style="margin:0">L</div>
+      <div style="flex:1">
+        <div style="font-weight:700;font-size:17px">${esc(c.nome)}</div>
+        <div class="muted" style="font-size:12px;font-family:var(--mono)">LofyPay • ${maskKey(c.key1)}</div>
+      </div>
+      <button class="btn ghost" onclick="abrirFormLofy('${c.id}')">✎ Editar</button>
+    </div>
     <div class="grid cols-2">
       <div class="card">
         <div class="section-title" style="margin:0 0 12px"><h2 style="font-size:15px">📥 Receber cobrança</h2></div>
