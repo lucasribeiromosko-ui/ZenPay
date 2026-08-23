@@ -1,19 +1,19 @@
 // ============================================================================
-//  Sincronização das contas do Central Lofy (compartilhada entre você e o sócio).
+//  Sincronização compartilhada (você + sócio). Guarda blobs nomeados num KV
+//  (Vercel KV / Upstash Redis). Protegido pela CENTRALPAY_API_KEY (x-api-key).
 //
-//  Guarda a lista de contas num KV (Vercel KV / Upstash Redis) — assim os dois
-//  veem as MESMAS contas de qualquer navegador. Protegido pela CENTRALPAY_API_KEY.
+//  POST { store }              -> { data: <valor|null> }   (ler)
+//  POST { store, data }        -> { ok: true }             (gravar)
 //
-//  POST { }            -> devolve { contas: [...] }        (ler)
-//  POST { contas:[...]}-> salva a lista e devolve { ok }   (gravar)
+//  stores permitidos: "contas" (contas Lofy) e "dados" (histórico).
 //
-//  Variáveis (a Vercel cria sozinha ao conectar um KV/Upstash no projeto):
-//    KV_REST_API_URL   / KV_REST_API_TOKEN         (Vercel KV)
+//  Variáveis (a Vercel cria ao conectar um KV/Upstash ao projeto):
+//    KV_REST_API_URL / KV_REST_API_TOKEN
 //    ou UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN
 // ============================================================================
 import { autorizado } from "./_auth.js";
 
-const KEY = "centralpay_contas";
+const STORES = { contas: "centralpay_contas", dados: "centralpay_dados" };
 const KV_URL = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
 const KV_TOKEN = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
 
@@ -36,20 +36,19 @@ export default async function handler(req, res) {
     });
   }
 
+  const { store, data } = req.body || {};
+  const key = STORES[store];
+  if (!key) return res.status(400).json({ erro: "store inválido (use contas ou dados)" });
+
   try {
-    const { contas } = req.body || {};
-
-    // Gravar
-    if (Array.isArray(contas)) {
-      await kvCmd(["SET", KEY, JSON.stringify(contas)]);
-      return res.status(200).json({ ok: true, salvo: contas.length });
+    if (data !== undefined && data !== null) {
+      await kvCmd(["SET", key, JSON.stringify(data)]);
+      return res.status(200).json({ ok: true });
     }
-
-    // Ler
-    const g = await kvCmd(["GET", KEY]);
-    let arr = [];
-    try { arr = JSON.parse(g.result) || []; } catch (e) {}
-    return res.status(200).json({ ok: true, contas: arr });
+    const g = await kvCmd(["GET", key]);
+    let val = null;
+    try { val = JSON.parse(g.result); } catch (e) {}
+    return res.status(200).json({ ok: true, data: val });
   } catch (e) {
     return res.status(500).json({ erro: "Falha na sincronização", detalhe: String(e) });
   }

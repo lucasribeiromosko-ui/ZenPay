@@ -17,7 +17,10 @@ function _load() {
   } catch (e) {}
   return { movimentos: [], saques: [] };
 }
-function _save(d) { localStorage.setItem(STORE_KEY, JSON.stringify(d)); }
+function _save(d) {
+  localStorage.setItem(STORE_KEY, JSON.stringify(d));
+  if (typeof pushDados === "function") pushDados(d); // sincroniza na nuvem (se ligado)
+}
 
 const _mesAtual = () => new Date().toISOString().slice(0, 7);   // "2026-08"
 const _hoje = () => new Date().toISOString().slice(0, 10);      // "2026-08-19"
@@ -41,6 +44,13 @@ const DB = {
     const d = _load();
     d.saques.unshift(s);
     _save(d);
+  },
+
+  // usados pela sincronização na nuvem
+  snapshot() { return _load(); },
+  hydrate(d) {
+    if (d && Array.isArray(d.movimentos) && Array.isArray(d.saques))
+      localStorage.setItem(STORE_KEY, JSON.stringify(d)); // grava SEM re-sincronizar
   },
 
   // Métricas reais derivadas das movimentações.
