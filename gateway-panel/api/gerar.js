@@ -95,6 +95,43 @@ const ADAPTERS = {
       };
     },
   },
+
+  // ------------------------------------------------------------- IcePay
+  //  POST https://api.icepay.com.br/api/v1/pix/create  (Bearer). valor em REAIS.
+  //  Resposta: { success:true, data:{ id, copy_paste, qr_code, qr_code_base64, status } }
+  icepay: {
+    envs: ["ICEPAY_SECRET"],
+    async create({ valor, descricao, pagador, secret }) {
+      const token = secret || process.env.ICEPAY_SECRET;
+      const base = "https://api.icepay.com.br/api/v1";
+      const call = (path) => fetch(base + path, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: Number(valor),
+          external_id: "CENTRALPAY-" + Date.now(),
+          description: (descricao || "Cobranca CentralPay").slice(0, 120),
+          payer: { name: (pagador || "Cliente").slice(0, 80) },
+        }),
+      });
+      // docs divergem entre /pix/create e /pix/charge — tenta um, cai pro outro no 404
+      let r = await call("/pix/create");
+      if (r.status === 404) r = await call("/pix/charge");
+      const d = await r.json().catch(() => ({}));
+      const dd = d.data || d;
+      const ok = r.ok && d.success !== false && dd && dd.id;
+      if (!ok) return { ok: false, status: r.status, erro: d.message || d.error || "Gateway recusou", raw: d };
+      return {
+        ok: true,
+        id: dd.id,
+        status: dd.status || "pending",
+        code: dd.copy_paste || dd.qr_code || null,
+        qr: dd.qr_code_base64 || null,
+        link: null,
+        raw: dd,
+      };
+    },
+  },
 };
 
 export default async function handler(req, res) {
