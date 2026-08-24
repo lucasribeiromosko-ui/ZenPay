@@ -60,6 +60,22 @@ const ADAPTERS = {
       return { ok: true, id, status: normalizar(bruto), bruto, raw: pp };
     },
   },
+
+  // ---------------------------------------------------------------- IcePay
+  //  GET https://api.icepay.com.br/api/v1/pix/status?transaction_id=uuid  (Bearer)
+  icepay: {
+    envs: ["ICEPAY_SECRET"],
+    async check({ id, secret }) {
+      const token = secret || process.env.ICEPAY_SECRET;
+      const url = `https://api.icepay.com.br/api/v1/pix/status?transaction_id=${encodeURIComponent(id)}`;
+      const r = await fetch(url, { method: "GET", headers: { Authorization: `Bearer ${token}` } });
+      const d = await r.json().catch(() => ({}));
+      const dd = d.data || d;
+      if (!r.ok) return { ok: false, status: r.status, erro: d.message || d.error || "Falha na consulta", raw: d };
+      const bruto = dd.status || "";
+      return { ok: true, id, status: normalizar(bruto), bruto, raw: dd };
+    },
+  },
 };
 
 export default async function handler(req, res) {

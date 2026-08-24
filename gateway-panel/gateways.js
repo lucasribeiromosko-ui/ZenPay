@@ -43,6 +43,22 @@ const GATEWAYS = [
     resumoReceber: "R$0,50 fixo",
     resumoSaque: "R$0,50 fixo",
   },
+  {
+    id: "icepay",
+    nome: "IcePay",
+    cor: "#38bdf8",
+    taxaReceber: 0,          // taxas não informadas nos docs — ajuste quando souber
+    taxaReceberFixa: 0,
+    taxaSaque: 0,
+    taxaSaqueFixa: 0,
+    prazo: "Na hora",
+    min: 0,
+    limiteDiario: 0,
+    liquidacao: "consulte as taxas no painel IcePay",
+    metodos: ["Pix"],
+    resumoReceber: "ver no painel",
+    resumoSaque: "ver no painel",
+  },
 ];
 
 // Calcula o que sobra após taxas de recebimento e de saque.
